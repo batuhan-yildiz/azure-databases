@@ -101,8 +101,8 @@ az network vnet peering create `
 
 az network vnet peering create `
   --name hub-to-jumpbox `
-  --resource-group rg-hub `
-  --vnet-name vnet-hub `
+  --resource-group $hubResourceGroup `
+  --vnet-name $hubVNet `
   --remote-vnet "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Network/virtualNetworks/$vnet" `
   --allow-vnet-access  
 ```

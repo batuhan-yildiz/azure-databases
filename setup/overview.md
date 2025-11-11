@@ -6,10 +6,11 @@ Use it to understand the logical topology before deploying or extending addition
 
 ## Virtual Networks
 
-| Resource Group | VNet Name      | Address Space | Subnet Name      | Subnet Prefix | Purpose                                               |
-| -------------- | -------------- | ------------- | ---------------- | ------------- | ----------------------------------------------------- |
-| `rg-hub`       | `vnet-hub`     | `10.0.0.0/16` | `subnet-hub`     | `10.0.0.0/24` | Shared resources (DNS, monitoring, private endpoints) |
-| `rg-jumpbox`   | `vnet-jumpbox` | `10.1.0.0/16` | `subnet-jumpbox` | `10.1.0.0/24` | Jumpbox virtual machine and admin access point        |
+| Resource Group  | VNet Name       | Address Space | Subnet Name       | Subnet Prefix | Purpose                                               |
+| --------------- | --------------- | ------------- | ----------------- | ------------- | ----------------------------------------------------- |
+| `rg-hub`        | `vnet-hub`      | `10.0.0.0/16` | `subnet-hub`      | `10.0.0.0/24` | Shared resources (DNS, monitoring, private endpoints) |
+| `rg-jumpbox`    | `vnet-jumpbox`  | `10.1.0.0/16` | `subnet-jumpbox`  | `10.1.0.0/24` | Jumpbox virtual machine and admin access point        |
+| `rg-oracle01`   | `vnet-oracle01` | `10.5.0.0/16` | `subnet-oracle01` | `10.5.0.0/24` | Oracle virtual machine        |
 
 ## Workloads
 
