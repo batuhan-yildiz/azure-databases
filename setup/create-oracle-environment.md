@@ -415,247 +415,248 @@ cat ~/.ssh/oraclevm01-key-ed
         Multitenant container database: OracleVM01
     Use https://localhost:5500/em to access Oracle Enterprise Manager for Oracle Database XE
 
-- Post-Installation Configuration
+### Step 12: Post-Installation Configuration
 
-    Fix permissions, configure the listener, and set Oracle environment variables.
+#### Fix permissions, configure the listener, and set Oracle environment variables.
 
-    ```powershell
-    # Fix listener log directory permissions
-    sudo mkdir -p /opt/oracle/product/21c/dbhomeXE/network/log
-    sudo chown -R oracle:oinstall /opt/oracle/product/21c/dbhomeXE/network/log
+```powershell
+# Fix listener log directory permissions
+sudo mkdir -p /opt/oracle/product/21c/dbhomeXE/network/log
+sudo chown -R oracle:oinstall /opt/oracle/product/21c/dbhomeXE/network/log
 
-    # Switch to Oracle user
-    sudo su - oracle
-    ```
+# Switch to Oracle user
+sudo su - oracle
+```
 
-    Create a system-wide profile script under /etc/profile.d to make Oracle environment variables available to all users and sessions, 
+#### Create a system-wide profile script under /etc/profile.d to make Oracle environment variables available to all users and sessions, 
 
-    ```powershell
-    # Create a System-Wide Profile Script
-    sudo tee /etc/profile.d/oracle_env.sh > /dev/null <<EOF
-        export ORACLE_HOME=/opt/oracle/product/21c/dbhomeXE
-        export PATH=\$ORACLE_HOME/bin:\$PATH
-        export LD_LIBRARY_PATH=\$ORACLE_HOME/lib
-        export ORACLE_SID=XE
-        export TNS_ADMIN=\$ORACLE_HOME/network/admin
-    EOF
-    sudo chmod +x /etc/profile.d/oracle_env.sh
-    
-    # Execute the script for immediate action
-    source /etc/profile.d/oracle_env.sh
-    ```
+```powershell
+# Create a System-Wide Profile Script
+sudo tee /etc/profile.d/oracle_env.sh > /dev/null <<EOF
+    export ORACLE_HOME=/opt/oracle/product/21c/dbhomeXE
+    export PATH=\$ORACLE_HOME/bin:\$PATH
+    export LD_LIBRARY_PATH=\$ORACLE_HOME/lib
+    export ORACLE_SID=XE
+    export TNS_ADMIN=\$ORACLE_HOME/network/admin
+EOF
+sudo chmod +x /etc/profile.d/oracle_env.sh
 
-    Start the listener
+# Execute the script for immediate action
+source /etc/profile.d/oracle_env.sh
+```
 
-    ```powershell
-    lsnrctl start
-    ```
+#### Start the listener
 
-    Start the Database Instance
+```powershell
+lsnrctl start
+```
 
-    ```powershell
-    sqlplus / as sysdba
-    ```
+#### Start the Database Instance
 
-    Starting Oracle XE and Opening Pluggable Database
+```powershell
+sqlplus / as sysdba
+```
 
-    ```powershell
-    # Boots the container database named XE
-    # Allocates memory, mounts the database, and opens it for use
-    STARTUP;
+#### Starting Oracle XE and Opening Pluggable Database
 
-    # Opens the pluggable database (PDB) named XEPDB1
-    # Makes it accessible for connections, queries, and schema operations
-    ALTER PLUGGABLE DATABASE XEPDB1 OPEN;
+```powershell
+# Boots the container database named XE
+# Allocates memory, mounts the database, and opens it for use
+STARTUP;
 
-    # Forces the database to re-register with the listener
-    # Useful if the listener was started after the database, or if dynamic registration failed
-    ALTER SYSTEM REGISTER;
-    
-    # Exits the SQL*Plus session
-    EXIT;
-    ```
+# Opens the pluggable database (PDB) named XEPDB1
+# Makes it accessible for connections, queries, and schema operations
+ALTER PLUGGABLE DATABASE XEPDB1 OPEN;
 
-    Validate Listener Services
+# Forces the database to re-register with the listener
+# Useful if the listener was started after the database, or if dynamic registration failed
+ALTER SYSTEM REGISTER;
 
-    ```powershell
-    lsnrctl status
-    ```
+# Exits the SQL*Plus session
+EXIT;
+```
 
-    ```test
-    You should see XE, XEPDB1, and XEXDB under Services Summary.
-    ```
+#### Validate Listener Services
 
-    Test SQL*Plus Connection
-    ```powershell
-    sqlplus system@localhost/XEPDB1
-    ```
+```powershell
+lsnrctl status
+```
 
-- Install Git to download sample schemas
+```text
+You should see XE, XEPDB1, and XEXDB under Services Summary.
+```
 
-    As the `<your-admin-username>` user:
+#### Test SQL*Plus Connection
+```powershell
+sqlplus system@localhost/XEPDB1
+```
 
-    ```powershell
-    sudo dnf install -y git
-    git --version
-    ```
+### Step 13: Install Git to download sample schemas
 
-- Download Oracle Sample Databases
+As the `<your-admin-username>` user:
 
-    Clone the official Oracle sample schema repository:
+```powershell
+sudo dnf install -y git
+git --version
+```
 
-    ```powershell
-    cd ~
-    git clone https://github.com/oracle-samples/db-sample-schemas.git
-    cd db-sample-schemas
-    ls
-    ```
+### Step 14: Download Oracle Sample Databases
 
-    💡 Note: You should see the following databases. For more information, review the [document](https://github.com/oracle-samples/db-sample-schemas).
-    - CO (Customer Orders) - OLTP 
-    - HR (Human Resources) - OLTP
-    - SH (Sales History) - OLAP
+Clone the official Oracle sample schema repository:
 
-- Load Sample Databases - customer_orders
+```powershell
+cd ~
+git clone https://github.com/oracle-samples/db-sample-schemas.git
+cd db-sample-schemas
+ls
+```
 
-    ```powershell
-    cd ~/db-sample-schemas/customer_orders
-    sqlplus system@localhost/XEPDB1 (or alternate sqlplus system@"localhost:1521/XEPDB1")
-    @co_install.sql
-    ```
-    💡 Note: 
+💡 Note: You should see the following databases. For more information, review the [document](https://github.com/oracle-samples/db-sample-schemas).
+- CO (Customer Orders) - OLTP 
+- HR (Human Resources) - OLTP
+- SH (Sales History) - OLAP
 
-    - Enter password: <set password for CO>
-    - Tablespace: Press Enter (defaults to USERS)
+### Step 15: Load Sample Databases - customer_orders
 
-    Verify data
+```powershell
+cd ~/db-sample-schemas/customer_orders
+sqlplus system@localhost/XEPDB1 (or alternate sqlplus system@"localhost:1521/XEPDB1")
+@co_install.sql
+```
+💡 Note: 
 
-    ```powershell
-    sqlplus co@localhost/XEPDB1
-    SELECT COUNT(*) FROM customers;
-    SELECT COUNT(*) FROM orders;
-    ```
+- Enter password: <set password for CO>
+- Tablespace: Press Enter (defaults to USERS)
 
-- Load Sample Databases - sales_history
+Verify data
 
-    ```powershell
-    cd ~/db-sample-schemas/sales_history
-    sqlplus system@localhost/XEPDB1 (or alternate sqlplus system@"localhost:1521/XEPDB1")
-    @sh_install.sql
-    ```
-    💡 Note: 
+```powershell
+sqlplus co@localhost/XEPDB1
+SELECT COUNT(*) FROM customers;
+SELECT COUNT(*) FROM orders;
+```
 
-    - Enter password: <set password for SH>
-    - Tablespace: Press Enter (defaults to USERS)
+### Step 16: Load Sample Databases - sales_history
 
-    Verify data
+```powershell
+cd ~/db-sample-schemas/sales_history
+sqlplus system@localhost/XEPDB1 (or alternate sqlplus system@"localhost:1521/XEPDB1")
+@sh_install.sql
+```
+💡 Note: 
 
-    ```powershell
-    sqlplus sh@localhost/XEPDB1
-    SELECT COUNT(*) FROM sales;
-    ```
+- Enter password: <set password for SH>
+- Tablespace: Press Enter (defaults to USERS)
 
-- Load Sample Databases - human_resources
+Verify data
 
-    ```powershell
-    cd ~/db-sample-schemas/human_resources
-    sqlplus system@localhost/XEPDB1 (or alternate sqlplus system@"localhost:1521/XEPDB1")
-    @hr_install.sql
-    ```
-    💡 Note: 
+```powershell
+sqlplus sh@localhost/XEPDB1
+SELECT COUNT(*) FROM sales;
+```
 
-    - Enter password: <set password for HR>
-    - Tablespace: Press Enter (defaults to USERS)
+### Step 17: Load Sample Databases - human_resources
 
-    Verify data
+```powershell
+cd ~/db-sample-schemas/human_resources
+sqlplus system@localhost/XEPDB1 (or alternate sqlplus system@"localhost:1521/XEPDB1")
+@hr_install.sql
+```
+💡 Note: 
 
-    ```powershell
-    sqlplus hr@localhost/XEPDB1
-    SELECT COUNT(*) FROM employees;
-    ```
+- Enter password: <set password for HR>
+- Tablespace: Press Enter (defaults to USERS)
 
-- Create a Custom Test User and Table
+Verify data
 
-    Connect as SYSTEM
+```powershell
+sqlplus hr@localhost/XEPDB1
+SELECT COUNT(*) FROM employees;
+```
 
-    ```powershell
-    sqlplus system@localhost/XEPDB1 (or alternate sqlplus system@"localhost:1521/XEPDB1")
-    ```
+### Step 18: Create a Custom Test User and Table
 
-    Create a new user and grant permissions:
+Connect as SYSTEM
 
-    ```powershell
-    CREATE USER test_user IDENTIFIED BY <password>;
-    GRANT CONNECT, RESOURCE TO test_user;
-    ALTER USER test_user QUOTA UNLIMITED ON USERS;
-    ```
+```powershell
+sqlplus system@localhost/XEPDB1 (or alternate sqlplus system@"localhost:1521/XEPDB1")
+```
 
-    Connect as new user
+Create a new user and grant permissions:
 
-    ```powershell
-    sqlplus test_user@localhost:1521/XEPDB1
-    ```
+```powershell
+CREATE USER test_user IDENTIFIED BY <password>;
+GRANT CONNECT, RESOURCE TO test_user;
+ALTER USER test_user QUOTA UNLIMITED ON USERS;
+```
 
-    Create and load a sample table
+Connect as new user
 
-    ```sql
-    CREATE TABLE employees (
-    id NUMBER PRIMARY KEY,
-    name VARCHAR2(100),
-    department VARCHAR2(50),
-    salary NUMBER
-    );
+```powershell
+sqlplus test_user@localhost:1521/XEPDB1
+```
 
-    INSERT INTO employees VALUES (1, 'Alice', 'Engineering', 90000);
-    INSERT INTO employees VALUES (2, 'Bob', 'Marketing', 75000);
-    INSERT INTO employees VALUES (3, 'Charlie', 'HR', 60000);
-    COMMIT;
+Create and load a sample table
 
-    SELECT * FROM employees;
-    ```
+```sql
+CREATE TABLE employees (
+id NUMBER PRIMARY KEY,
+name VARCHAR2(100),
+department VARCHAR2(50),
+salary NUMBER
+);
 
-- Run queries for the databases
+INSERT INTO employees VALUES (1, 'Alice', 'Engineering', 90000);
+INSERT INTO employees VALUES (2, 'Bob', 'Marketing', 75000);
+INSERT INTO employees VALUES (3, 'Charlie', 'HR', 60000);
+COMMIT;
 
-    ```powershell
-    # connect customer_orders database
-    sqlplus co@localhost/XEPDB1 (or alternate sqlplus co@"localhost:1521/XEPDB1")
-    ```
+SELECT * FROM employees;
+```
 
-    ```sql
-    #Which schema
-    SHOW USER;
+### Step 19: Run queries for the databases
 
-    --Which tables
-    SELECT table_name FROM user_tables ORDER BY table_name;
+```powershell
+# connect customer_orders database
+sqlplus co@localhost/XEPDB1 (or alternate sqlplus co@"localhost:1521/XEPDB1")
+```
+
+```sql
+#Which schema
+SHOW USER;
+
+--Which tables
+SELECT table_name FROM user_tables ORDER BY table_name;
 
 
-    --List tables by schema
-    COLUMN owner FORMAT A10
-    COLUMN table_name FORMAT A30
+--List tables by schema
+COLUMN owner FORMAT A10
+COLUMN table_name FORMAT A30
 
-    SELECT owner, table_name
-    FROM all_tables
-    WHERE owner = 'CO'
-    ORDER BY table_name;    
+SELECT owner, table_name
+FROM all_tables
+WHERE owner = 'CO'
+ORDER BY table_name;    
 
-    /*
-    Explanation:
-    - FORMAT A10 → sets OWNER column to 10 characters wide
-    - FORMAT A30 → sets TABLE_NAME column to 30 characters wide
-    This will print the results in a cleaner, single-line format like:
-    */
+/*
+Explanation:
+- FORMAT A10 → sets OWNER column to 10 characters wide
+- FORMAT A30 → sets TABLE_NAME column to 30 characters wide
+This will print the results in a cleaner, single-line format like:
+*/
 
-    --Select from Orders table
-    SELECT COUNT(*) FROM orders;
+--Select from Orders table
+SELECT COUNT(*) FROM orders;
 
-    --Exit
-    exit
-    ```
+--Exit
+exit
+```
 
-    Run the similar queries for human_resources and sales_history
+Run the similar queries for human_resources and sales_history
 
-    - sqlplus hr@localhost/XEPDB1 (or alternate sqlplus co@"localhost:1521/XEPDB1"    )
-    - sqlplus sh@localhost/XEPDB1 (or alternate sqlplus co@"localhost:1521/XEPDB1")
+- sqlplus hr@localhost/XEPDB1 (or alternate sqlplus co@"localhost:1521/XEPDB1"    )
+- sqlplus sh@localhost/XEPDB1 (or alternate sqlplus co@"localhost:1521/XEPDB1")
 
+💡 Note:
 You now have a fully configured Oracle XE environment with sample and custom databases.
 This setup can be used for migration testing, training, or integration validation with Azure PostgreSQL.
