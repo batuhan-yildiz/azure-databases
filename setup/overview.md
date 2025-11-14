@@ -39,7 +39,7 @@ Use it to understand the logical topology before deploying or extending addition
 | `rg-jumpbox`     | `vnet-jumpbox`   | `10.1.0.0/16` | `subnet-vnet-jumpbox-backend`  | `10.1.0.0/24` |
 | `rg-oracle01`    | `vnet-oracle01`  | `10.5.0.0/16` | `subnet-vnet-oracle01-backend` | `10.5.0.0/24` |
 | `rg-pgsql03`     | `vnet-pgsql03`   | `10.6.0.0/16` | `subnet-vnet-pgsql03-backend`  | `10.6.0.0/24` |
-| `rg-openai01`    | `vnet-openai01`  | `10.6.0.0/16` | `subnet-vnet-openai01-backend` | `10.6.0.0/24` |
+| `rg-openai01`    | `vnet-openai01`  | `10.7.0.0/16` | `subnet-vnet-openai01-backend` | `10.7.0.0/24` |
 
 
 ## VNet Peering Configuration
