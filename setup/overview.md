@@ -6,7 +6,7 @@ Use it to understand the logical topology before deploying or extending addition
 
 ## Workloads
 
-| Resource Name       | Resource Group  | VNet            | Subnet                         | Public IP              | Private IP | Purpose                                       |
+| Resource Name       | Resource Group  | VNet            | Subnet                         | Public IP              | Private IP | Description                                   |
 | ------------------- | --------------- | --------------- | ------------------------------ | ---------------------- | ---------- | --------------------------------------------- |
 | `JumpboxVM01`       | `rg-jumpbox`    | `vnet-jumpbox`  | `subnet-vnet-jumpbox-backend`  | `<assigned-public-ip>` | `10.1.0.4` | Jumpbox VM                                    |
 | `OracleVM01`        | `rg-oracle01`   | `vnet-oracle01` | `subnet-vnet-oracle01-backend` | `No Public IP`         | `10.5.0.4` | Oracle-Linux 8.10 and Oracle Database 21c XE  |
