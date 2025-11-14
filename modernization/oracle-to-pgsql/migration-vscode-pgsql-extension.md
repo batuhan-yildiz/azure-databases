@@ -49,8 +49,10 @@
   - Once you see "[All]: OpenAI connection successful" in the output window, click on **Create Migration Project**.
 
 - Oracle-to-PGSQL Migration01 project main view
-  - Schema Migration: Step 1 - Convert database code and scripts to PostgreSQL - Click on **Migrate** button.
-    - Review the Schema Migration
+  - Schema Migration: 
+    - Step 1 - Convert database code and scripts to PostgreSQL. - Click on **Migrate** button.
+    - Review the Schema Migration progress
   - Schema Review
-  - Data Migration
+    - Step 2: Review and finalize migration tasks.
   - Application Migration
+    - Step 3: Select and convert Oracle scripts to PostgreSQL.
