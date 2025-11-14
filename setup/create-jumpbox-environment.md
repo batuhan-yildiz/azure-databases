@@ -36,62 +36,66 @@ By using az account set, all future CLI commands will run under this subscriptio
 $location="westus3"
 $resourceGroup="rg-jumpbox"
 $vnet="vnet-jumpbox"
-$subnet="subnet-jumpbox01"
-$subnetSecurity="nsg-subnet-jumpbox01"
+$backendSubnet="subnet-vnet-jumpbox-backend"
+$backendSubnetNSG="nsg-subnet-vnet-jumpbox-backend"
+$hubResourceGroup="rg-hub"
+$hubVNet="vnet-hub"
+$publicIP="pip-JumpboxVM01"
+$networkInterface="nic-JumpboxVM01"
+$vmName="JumpboxVM01"
+$osDisk="disk1-JumpboxVM01"
+$rdpRuleName01 = "AllowRDP"
+$sourceIP01 = "<your-home-or-office-public-ip>/32"   # Replace with your IP address
+$priority01 = 100  # Lower number = higher priority
 ```
 
 💡 Note:
 Defining variables at the top helps make your scripts reusable.
 You can change the region or naming convention once here, and all following commands will automatically use those values.
 
-### Step 3: Create a Resource Group for the jumpbox
+### Step 3: Create resource group for jumpbox
 
 ```powershell
 # Create a resource group
-az group create --name $resourceGroup --location $location
+az group create `
+  --name $resourceGroup `
+  --location $location
 ```
 
-### Step 4: Create the Jumpbox Virtual Network and Subnet
+### Step 4: Create the Jumpbox virtual network and subnet
 
 ```powershell
-# Create a virtual network with a subnet
+# Create VNet with initial subnet
 az network vnet create `
   --resource-group $resourceGroup `
   --name $vnet `
   --address-prefix 10.1.0.0/16 `
-  --subnet-name $subnet `
-  --subnet-prefix 10.1.0.0/24
+  --subnet-name $backendSubnet `
+  --subnet-prefix 10.1.0.0/24 `
   --location $location
 ```
 
-### Step 5: Create a Network Security Group (NSG) and attach it to the subnet
+### Step 5: Create network security group (NSG) and attach it to the subnet
 
 ```powershell
 # Create a network security group
 az network nsg create `
   --resource-group $resourceGroup `
-  --name $subnetSecurity
+  --name $backendSubnetNSG `
   --location $location
 
 # Attach network security group to virtual network subnet
 az network vnet subnet update `
   --resource-group $resourceGroup `
   --vnet-name $vnet `
-  --name $subnet `
-  --network-security-group $subnetSecurity
+  --name $backendSubnet `
+  --network-security-group $backendSubnetNSG
 ```
 
 ### Step 6: Peer spoke vnets to hub
 
-#### Peer vnet-jumpbox - vnet-hub
-
 ```powershell
-# Variables
-$hubResourceGroup="rg-hub"
-$hubVNet="vnet-hub"
-```
-
-```powershell
+# Peer jumpbox to hub
 az network vnet peering create `
   --name jumpbox-to-hub `
   --resource-group $resourceGroup `
@@ -99,6 +103,7 @@ az network vnet peering create `
   --remote-vnet "/subscriptions/$subscriptionId/resourceGroups/$hubResourceGroup/providers/Microsoft.Network/virtualNetworks/$hubVNet" `
   --allow-vnet-access
 
+# Peer hub to jumpbox
 az network vnet peering create `
   --name hub-to-jumpbox `
   --resource-group $hubResourceGroup `
@@ -107,32 +112,24 @@ az network vnet peering create `
   --allow-vnet-access  
 ```
 
-### Step 7: Create a public IP and a network interface to be used by JumpboxVM01 Virtual Machine
+### Step 7: Create network interface with private and public IP to be used by JumpboxVM01 Virtual Machine
 
 ```powershell
-# Variables
-$publicIP="pip-JumpboxVM01"
-$networkInterface="nic-JumpboxVM01"
-```
-
-```powershell
-# Create a public IP
+# Create public IP
 az network public-ip create `
   --resource-group $resourceGroup `
   --name $publicIP `
   --sku Standard `
   --allocation-method Static `
   --location $location
-```
 
-```powershell
-# Create a network interface
+# Create network interface with private and public IP
 az network nic create `
   --resource-group $resourceGroup `
   --name $networkInterface `
   --vnet-name $vnet `
-  --subnet $subnet `
-  --network-security-group $subnetSecurity `
+  --subnet $backendSubnet `
+  --network-security-group $backendSubnetNSG `
   --public-ip-address $publicIP `
   --location $location
 ```
@@ -141,20 +138,22 @@ az network nic create `
 
 Linking JumpboxVM01 Virtual Machine's VNet to the private DNS zone is a critical step for enabling private name resolution of Azure PaaS services like your PostgreSQL Flexible Server. 
 
-Private DNS Zone hs veen created in hub resource group.
+Private DNS Zone has veen created in hub resource group.
 
 ```powershell
-# Variables
-$hubResourceGroup="rg-hub"
-$hubVNet="vnet-hub"
-```
-
-```powershell
-# Link the VNet to the Private DNS Zone
+# Link the VNet to the Private DNS Zone for PostgreSQL
 az network private-dns link vnet create `
   --resource-group $hubResourceGroup `
   --zone-name privatelink.postgres.database.azure.com `
-  --name link-to-vnet-jumpbox `
+  --name link-to-vnet-jumpbox-postgresql `
+  --virtual-network "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Network/virtualNetworks/$vnet" `
+  --registration-enabled false
+
+# Link the VNet to the Private DNS Zone for OpenAI
+az network private-dns link vnet create `
+  --resource-group $hubResourceGroup `
+  --zone-name privatelink.openai.azure.com `
+  --name link-to-vnet-jumpbox-openai `
   --virtual-network "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Network/virtualNetworks/$vnet" `
   --registration-enabled false
 ```
@@ -185,12 +184,6 @@ Typical use cases include:
 ⚠️ **Note:** Replace placeholder values like `<your-admin-username>` and `<your-admin-password>` with your own before running the commands.
 
 ```powershell
-# Variables
-$vmName="JumpboxVM01"
-$osDisk="disk1-JumpboxVM01"
-```
-
-```powershell
 # Create the virtual machine
 az vm create `
   --resource-group $resourceGroup `
@@ -204,39 +197,36 @@ az vm create `
   --os-disk-name $osDisk
 ```  
 
-### Step 10: Allow RDP Access to the Jumpbox
-
-```powershell
-# Variables
-$rdpRuleName = "AllowRDP"
-$sourceIP = "<your-home-or-office-public-ip>/32"   # Replace with your IP address
-$priority = 100  # Lower number = higher priority
-```
+### Step 10: Allow RDP access to the Jumpbox
 
 ```powershell
 # Create NSG rule to allow RDP
 az network nsg rule create `
   --resource-group $resourceGroup `
-  --nsg-name $subnetSecurity `
-  --name $rdpRuleName `
-  --priority $priority `
+  --nsg-name $backendSubnetNSG `
+  --name $rdpRuleName01 `
+  --priority $priority01 `
   --protocol Tcp `
-  --source-address-prefixes $sourceIP `
+  --source-address-prefixes $sourceIP01 `
   --destination-port-ranges 3389 `
   --description "Allow RDP access to Jumpbox from trusted IP"
 ```
 
+💡 Note:
+Capture the Public IP of the Jumbox to connect through RDP
+
 ### Step 11: Install VS Code in JumpboxVM01
 
-  1. Go to the official download page from your jumpbox VM:
+  1. RDP to JumpboxVM01
+  2. Go to the official download page from your jumpbox VM:
       https://code.visualstudio.com/download
-  2. Download the "System Installer" for Windows:
+  3. Download the "System Installer" for Windows:
       Look for: "Windows: System Installer"
       User Installer: Installs VS Code only for the current user
       System Installer: Installs VS Code for all users on the system
-  3. Run the installer as Administrator:
+  4. Run the installer as Administrator:
       This will install VS Code for all users on the VM
-  4. Complete the installation:
+  5. Complete the installation:
       Accept defaults
       Enable 
         - Create a desktop icon
@@ -245,7 +235,7 @@ az network nsg rule create `
         - Register Code as an editor for supported file types
         - Add to PATH
 
-### Step 12: Install VS Code PostgreSQL extension
+### Step 12: Install VS Code PostgreSQL extension in JumpboxVM01
 
 - Open VS Code
 - Go to Extensions View (Ctrl+Shift+X)
