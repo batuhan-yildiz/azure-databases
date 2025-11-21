@@ -43,7 +43,7 @@ $serverName="azsqlmimod01"
 $adminUser = "azsqladmin"
 $adminPassword = Read-Host -Prompt "Enter admin password:" -AsSecureString
 $cred = New-Object System.Management.Automation.PSCredential($adminUser, $adminPassword)
-$serverName="azsqlmimod01"
+$serverName="azsqlmidevtest01"
 #$serverNameTemp="azsqlmimod01temp02"
 
 ```
@@ -221,24 +221,45 @@ az network nsg rule list `
   --resource-group $resourceGroup `
   --nsg-name $backendSubnetNSG
 
-# Create the rule
+# Allow SQL traffic from Jumpbox VNet
 az network nsg rule create `
   --resource-group $resourceGroup `
   --nsg-name $backendSubnetNSG `
-  --name Allow-Jumpbox-Inbound `
-  --priority 110 `
+  --name Allow-SQL-Jumpbox `
+  --priority 1000 `
   --direction Inbound `
   --access Allow `
   --protocol Tcp `
-  --source-address-prefixes 10.1.0.0/24 `
-  --destination-address-prefixes 10.2.0.0/24 `
-  --destination-port-ranges 1433 443
+  --source-address-prefixes 10.1.0.0/16 `
+  --source-port-ranges '*' `
+  --destination-port-ranges 1433 `
+  --destination-address-prefixes 10.3.0.0/24
+
+# Allow MI management traffic
+az network nsg rule create `
+  --resource-group $resourceGroup `
+  --nsg-name $backendSubnetNSG `
+  --name Allow-MI-Management `
+  --priority 1100 `
+  --direction Inbound `
+  --access Allow `
+  --protocol Tcp `
+  --source-address-prefixes AzureCloud `
+  --destination-port-ranges 9000-9003
+
+# Allow outbound HTTPS to Azure services
+az network nsg rule create `
+  --resource-group $resourceGroup `
+  --nsg-name $backendSubnetNSG `
+  --name Allow-Outbound-Azure `
+  --priority 1200 `
+  --direction Outbound `
+  --access Allow `
+  --protocol Tcp `
+  --destination-address-prefixes AzureCloud `
+  --destination-port-ranges 443
 
 # Test the connection from JumpboxVM01
-Test-NetConnection azsqlmimod01.38f6bb5af46d.database.windows.net -Port 1433
-
-$serverName
-
+Test-NetConnection <host_from_azure_portal> -Port 1433
 ```
 
-  ### Step 9: Find the Private IP of Your PostgreSQL Server
