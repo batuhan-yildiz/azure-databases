@@ -43,8 +43,8 @@ $serverName="azsqlmimod01"
 $adminUser = "azsqladmin"
 $adminPassword = Read-Host -Prompt "Enter admin password:" -AsSecureString
 $cred = New-Object System.Management.Automation.PSCredential($adminUser, $adminPassword)
-$serverNameTemp="azsqlmimod01"
-$serverNameTemp="azsqlmimod01temp02"
+$serverName="azsqlmimod01"
+#$serverNameTemp="azsqlmimod01temp02"
 
 ```
 
@@ -187,7 +187,7 @@ $entraUser = az ad user list --output json | ConvertFrom-Json |
 ```powershell
 # Create Azure SQL MI with Entra ID Authentication Only
 az sql mi create `
-   --name $serverNameTemp `
+   --name $serverName `
    --resource-group $resourceGroup `
    --location $location `
    --vnet-name $vnet `
