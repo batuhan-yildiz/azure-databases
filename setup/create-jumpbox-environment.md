@@ -156,10 +156,17 @@ az network private-dns link vnet create `
   --name link-to-vnet-jumpbox-openai `
   --virtual-network "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Network/virtualNetworks/$vnet" `
   --registration-enabled false
+
+# Link the VNet to the Private DNS Zone for SQL Databases
+az network private-dns link vnet create `
+  --resource-group $hubResourceGroup `
+  --zone-name privatelink.database.windows.net `
+  --name link-to-vnet-jumpbox-azuresql `
+  --virtual-network "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Network/virtualNetworks/$vnet" `
+  --registration-enabled false
 ```
 
 ### Step 9: Create a jumpbox vm
-
 
 The Jumpbox VM is a small, secure virtual machine deployed in its own dedicated VNet, which is peered to hub VNet and and will be peered to other Vnets like the PostgreSQL VNet.
 
@@ -181,7 +188,9 @@ Typical use cases include:
 - Use NSGs, Just-in-Time (JIT) VM access, or Azure Bastion to secure RDP access.
 - The Jumpbox should remain lightweight and used only for administrative or testing tasks.
 
-⚠️ **Note:** Replace placeholder values like `<your-admin-username>` and `<your-admin-password>` with your own before running the commands.
+⚠️ **Note:** 
+- Replace placeholder values like `<your-admin-username>` and `<your-admin-password>` with your own before running the commands.
+- license-type Windows_Server: Save up to 49% with a license you already own using Azure Hybrid Benefit. You need to confirm you have an eligible Windows Server license with Software Assurance or Windows Server subscription to apply this Azure Hybrid Benefit.
 
 ```powershell
 # Create the virtual machine
@@ -194,7 +203,8 @@ az vm create `
   --size Standard_B2ms `
   --admin-username <your-admin-username> `
   --admin-password '<your-admin-password>' `
-  --os-disk-name $osDisk
+  --os-disk-name $osDisk `
+  --license-type Windows_Server
 ```  
 
 ### Step 10: Allow RDP access to the Jumpbox
@@ -221,7 +231,7 @@ Capture the Public IP of the Jumbox to connect through RDP
   2. Go to the official download page from your jumpbox VM:
       https://code.visualstudio.com/download
   3. Download the "System Installer" for Windows:
-      Look for: "Windows: System Installer"
+      Look for: "Windows: System Installer and x64"
       User Installer: Installs VS Code only for the current user
       System Installer: Installs VS Code for all users on the system
   4. Run the installer as Administrator:
@@ -239,6 +249,9 @@ Capture the Public IP of the Jumbox to connect through RDP
 
 - Open VS Code
 - Go to Extensions View (Ctrl+Shift+X)
-- Click the ... menu → Install from VSIX...
-- Select the downloaded .vsix file (copied the file in JumpboxVM01 to C:\data\Extensions\VSCode)
+- Install PostgreSQL (Publisher Microsoft)
 - Restart VS Code (recommended)
+- Review the features
+  - Connections
+  - Query History
+  - Migrations

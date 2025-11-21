@@ -717,6 +717,10 @@ ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@<oracle-vm-private-ip>
 ```
 Connect to the database as SYSDBA
 
+```powershell
+sqlplus / as sysdba
+```
+
 If you get a message like "invalid username/password; logon denied",  Oracle XE instance is not allowing OS authentication for **sqlplus / as sysdba**.
 
 Check Group Membership

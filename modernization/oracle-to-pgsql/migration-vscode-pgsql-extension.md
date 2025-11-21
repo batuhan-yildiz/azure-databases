@@ -49,6 +49,10 @@
   - Once you see "[All]: OpenAI connection successful" in the output window, click on **Create Migration Project**.
 
 - Oracle-to-PGSQL Migration01 project main view
+
+    > ⚠️ Note:
+    Choose your Open AI model configuration. 500000 TPM (Tokens Per Minute) recommended for optimal performance.
+
   - Schema Migration: 
     - Step 1 - Convert database code and scripts to PostgreSQL. - Click on **Migrate** button.
     - Review the Schema Migration progress

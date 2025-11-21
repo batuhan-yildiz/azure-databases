@@ -296,6 +296,19 @@ az network private-endpoint show `
   --query "provisioningState" -o tsv
 ```
 
+### Step 11: Update Token per minute (TPM)
+
+- Migration requires TPM to be greated than 500K. You can set TPM in Powershell code. 
+- Go to https://ai.azure.com/
+- Search for Azure OpenAI service and open it
+- Go to Deployments and select GPT-4.1
+- Edit the configuration
+- Update TPM to 500K
+- Submit Changes
+
+💡 **Note:**
+Review for more details. [Deployment types for Azure AI Foundry Models](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/deployment-types)
+
 ### Step 11: Test from JumpboxVM01
 
 ```powershell

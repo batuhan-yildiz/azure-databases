@@ -25,14 +25,12 @@ By using az account set, all future CLI commands will run under this subscriptio
 
 ```powershell
 # Variables
-$location="westus2"
+$location="westus3"
 $resourceGroup="rg-hub"
 $vnet="vnet-hub"
 $backendSubnet="subnet-vnet-hub-backend"
 $backendSubnetNSG="nsg-subnet-vnet-hub-backend"
-$privateLinkSubnet="subnet-vnet-hub-privatelink"
-$privateLinkSubnetNSG="nsg-subnet-vnet-hub-privatelink"
-$logAnalytics="log-analytics-hub01"
+$logAnalytics="log-analytics-01-hub"
 ```
 
 💡 Note:
@@ -63,13 +61,6 @@ az network vnet create `
   --subnet-name $backendSubnet `
   --subnet-prefix 10.0.0.0/24 `
   --location $location
-
-# Add additional subnet for Private Link
-az network vnet subnet create `
-  --resource-group $resourceGroup `
-  --vnet-name $vnet `
-  --name $privateLinkSubnet `
-  --address-prefix 10.0.1.0/24
 ```
 
 ### Step 5: Create network security group (NSG) and attach it to the subnet
@@ -81,23 +72,12 @@ az network nsg create `
   --name $backendSubnetNSG `
   --location $location
 
-az network nsg create `
-  --resource-group $resourceGroup `
-  --name $privateLinkSubnetNSG `
-  --location $location
-
 # Attach network security group to virtual network subnet
 az network vnet subnet update `
   --resource-group $resourceGroup `
   --vnet-name $vnet `
   --name $backendSubnet `
   --network-security-group $backendSubnetNSG
-
-az network vnet subnet update `
-  --resource-group $resourceGroup `
-  --vnet-name $vnet `
-  --name $privateLinkSubnet `
-  --network-security-group $privateLinkSubnetNSG
 ```
 
 ### Step 6: Create log analytics
@@ -111,7 +91,7 @@ az monitor log-analytics workspace create `
 ```
 
 💡 Note:
-The Log Analytics workspace allows you to collect telemetry from all workloads centrally.
+The Log Analytics workspace allows you to collect telemetry from all workloads centrally once it is configured.
 
 ### Step 7: Create private DNS zone
 
@@ -125,6 +105,16 @@ az network private-dns zone create `
 az network private-dns zone create `
   --resource-group $resourceGroup `
   --name privatelink.openai.azure.com
+
+# Create a shared Private DNS Zone for Azure SQL family services
+<#
+- Azure SQL Database (including Hyperscale)
+- Azure SQL Managed Instance (SQL MI)
+- Azure Synapse SQL pools (they share the same DNS suffix)
+#>
+az network private-dns zone create `
+  --resource-group $resourceGroup `
+  --name privatelink.database.windows.net
 ```
 
 💡 Note:
