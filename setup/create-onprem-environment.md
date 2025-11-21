@@ -7,9 +7,6 @@ In this repository, this VM will primarily be used to access:
 - Hyper-V and nested VMs
 - Windows and SQL Arc
 
-> ⚠️ Note: The Jumpbox should not host production workloads. Its purpose is to provide controlled access to private network resources.
-
-
 ⚠️ **Note:** Replace placeholder values like `<your-subscription-id>` with your own before running the commands.
 
 ---
@@ -866,8 +863,8 @@ You can create a scenario like below
   - Service: Domain user account
   - SQL Server Version: SQL Server 2014
 - Enable firewall for SQL ports in each node
-<br>
-<br>
+
+
     ```powershell
     # Node01
 
