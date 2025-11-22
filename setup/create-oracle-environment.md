@@ -42,12 +42,15 @@ $jumpboxVNet="vnet-jumpbox"
 $networkInterface = "nic-OracleVM01"
 $SSH_KEY_NAME="oraclevm01-key-ed"
 $vmName="OracleVM01"
+$adminUser = "azadmin"
+$adminPassword = Read-Host -Prompt "Enter admin password:" -AsSecureString
+$cred = New-Object System.Management.Automation.PSCredential($adminUser, $adminPassword)
 $osDisk="disk1-OracleVM01"
 $rdpRuleName01 = "AllowSSH"
-$sourceIP01 = "<your source ip>/32"   # Private subnet range of JumpboxVM01 - 10.1.0.0/24
+$sourceIP01 = "10.1.0.0/24" # Private subnet range of JumpboxVM01 - 10.1.0.0/24
 $priority01 = 100  # Lower number = higher priority
 $rdpRuleName02 = "AllowConnectionToOracle"
-$sourceIP02 = "<your source ip>/32"   # Private subnet range of JumpboxVM01 - 10.1.0.0/24
+$sourceIP02 = "10.1.0.0/24" # Private subnet range of JumpboxVM01 - 10.1.0.0/24
 $priority02 = 110  # Lower number = higher priority
 ```
 
@@ -71,9 +74,9 @@ az group create `
 az network vnet create `
   --resource-group $resourceGroup `
   --name $vnet `
-  --address-prefix 10.5.0.0/16 `
+  --address-prefix 10.4.0.0/16 `
   --subnet-name $backendSubnet `
-  --subnet-prefix 10.5.0.0/24
+  --subnet-prefix 10.4.0.0/24 `
   --location $location
 ```
 
@@ -184,8 +187,6 @@ az vm image list --publisher Oracle --output table --all
 
 #### Deploy Oracle VM (Oracle-Linux 8.10)
 
-⚠️ **Note:** Replace placeholder values like `<your-admin-username>` with your own before running the commands.
-
 ```powershell
 # Create the Oracle Linux virtual machine
 az vm create `
@@ -195,7 +196,7 @@ az vm create `
   --nics $networkInterface `
   --image "Oracle:Oracle-Linux:ol810-lvm-gen2:8.10.7" `
   --size "Standard_D4s_v3" `
-  --admin-username "<your-admin-username>" `
+  --admin-username $adminUser `
   --ssh-key-values "$env:USERPROFILE\.ssh\$SSH_KEY_NAME.pub" `
   --authentication-type ssh `
   --security-type "TrustedLaunch" `
@@ -284,14 +285,15 @@ icacls "$env:USERPROFILE\.ssh\oraclevm01-key-ed" /inheritance:r /grant:r "${env:
 Open Windows Powershell with Admin and run the following command
 
 ```powershell
-#Use the following command to connect from your laptop or Jumpbox:
+#Use the following command to connect from Jumpbox:
 ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@<oracle-vm-private-ip>
+# ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@10.4.0.4
 ```
 
 💡 Note:
 Replace `<oracle-vm-private-ip>` with your actual Oracle VM's private IP address
 
-If you receive the following message, type yes then press enter. SSH will remember this host in your known_hosts file for future sessions.
+If you receive the following message, type **yes** then press enter. SSH will remember this host in your known_hosts file for future sessions.
 
 ```text
 The authenticity of host '10.5.0.4 (10.5.0.4)' can't be established.
@@ -317,8 +319,9 @@ If you see connection timed out, It means your VM's port 22 (SSH) is blocked. Go
 If you are not connected Oracle-Linux server, run the command below from JumpboxVM01.
 
 ```powershell
-#Use the following command to connect from your laptop or Jumpbox:
+#Use the following command to connect from your Jumpbox:
 ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@<oracle-vm-private-ip>
+# ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@10.4.0.4
 ```
 
 Update packages and install dependencies required for Oracle XE.
@@ -411,7 +414,7 @@ lsnrctl status
 ```
 
 💡 Note: What to Look For:
-  - Listener is running
+  - Listener is running (Start Date and Uptime shows the listener status.)
   - Services like XE, XEPDB1, and XEXDB show status READY
   - Listening endpoints include PORT=1521
 
@@ -432,7 +435,7 @@ Exit
 
 ### Step 14: Install Git to download sample schemas
 
-As the `<your-admin-username>` user:
+Connected with admin user ($adminUser = "azadmin"):
 
 ```powershell
 sudo dnf install -y git
@@ -451,9 +454,8 @@ ls -l
 ```
 
 💡 Note: You should see the following databases. For more information, review the [document](https://github.com/oracle-samples/db-sample-schemas).
-- CO (Customer Orders) - OLTP 
-- HR (Human Resources) - OLTP
-- SH (Sales History) - OLAP
+- CO (customer_orders) - OLTP 
+- HR (human_resources) - OLTP
 
 ### Step 16: Load Sample Databases - customer_orders
 
@@ -477,28 +479,7 @@ SELECT COUNT(*) FROM orders;
 Exit
 ```
 
-### Step 17: Load Sample Databases - sales_history
-
-```powershell
-cd ~/db-sample-schemas/sales_history
-sqlplus system@localhost/XEPDB1 (or alternate sqlplus system@"localhost:1521/XEPDB1")
-@sh_install.sql
-```
-💡 Note: 
-
-- Enter password: `<set password for SH>`
-- Tablespace: `Press Enter (defaults to USERS)`
-- Do you want to overwrite the schema, if it already exists? [YES|no]: `YES`
-
-Verify data
-
-```powershell
-sqlplus sh@localhost/XEPDB1
-SELECT COUNT(*) FROM sales;
-Exit
-```
-
-### Step 18: Load Sample Databases - human_resources
+### Step 17: Load Sample Databases - human_resources
 
 ```powershell
 cd ~/db-sample-schemas/human_resources
@@ -519,7 +500,7 @@ SELECT COUNT(*) FROM employees;
 Exit
 ```
 
-### Step 19: Create a Custom Test User and Table
+### Step 18: Create a Custom Test User and Table
 
 Connect as SYSTEM
 
@@ -561,7 +542,7 @@ COMMIT;
 SELECT * FROM employees;
 ```
 
-### Step 20: Run queries for the databases
+### Step 19: Run queries for the databases
 
 ```powershell
 # connect customer_orders database
@@ -574,7 +555,6 @@ SHOW USER;
 
 --Which tables
 SELECT table_name FROM user_tables ORDER BY table_name;
-
 
 --List tables by schema
 COLUMN owner FORMAT A10
@@ -599,18 +579,18 @@ SELECT COUNT(*) FROM orders;
 exit
 ```
 
-Run the similar queries for human_resources and sales_history
+Run the similar queries for human_resources
 
 - sqlplus hr@localhost/XEPDB1 (or alternate sqlplus co@"localhost:1521/XEPDB1"    )
-- sqlplus sh@localhost/XEPDB1 (or alternate sqlplus co@"localhost:1521/XEPDB1")
 
-### Step 21: Update listener to be accessible from outside (JumpboxVM01)
+### Step 20: Update listener to be accessible from outside (JumpboxVM01)
 
 SSH to OracleVM01 from JumpboxVM01 with Windows Powershell
 
 ```powershell
 #Use the following command to connect from your laptop or Jumpbox:
 ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@<oracle-vm-private-ip>
+# ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@10.4.0.4
 ```
 
 Edit listener.ora
@@ -634,23 +614,24 @@ LISTENER =
 
 Listener accepts TCP connection from local host. When you SSH to linux server, you can connect to database because host is set to local as **HOST = oraclevm01.internal.cloudapp.net**. 
 
-Update Host to 0.0.0.0 for now to accept connection from everywhere like **HOST = 0.0.0.0**
+Update the listener.ora file
+- (ADDRESS=(PROTOCOL=IPC)(KEY=EXTPROC1521)) allows tools and local scripts to connect internally, which is standard practice.
+- Update the listener name to LISTENER_XE
+- HOST=10.4.0.4, which is OracleVM01 private IP, ensures the listener is reachable only from networks that can access this private IP (Jumpbox VM, other peered VNets).
+- Avoids 0.0.0.0, which exposes the listener to all networks, risky in production.
 
-Save the file (Ctrl O - Press Enter - Ctrl X)
-
-Updated version of listener.ora
-
-```text
-DEFAULT_SERVICE_LISTENER = XE
-
-LISTENER =
+```powershell
+# Updated version of listener.ora
+LISTENER_XE =
   (DESCRIPTION_LIST =
     (DESCRIPTION =
-      (ADDRESS = (PROTOCOL = TCP)(HOST = 0.0.0.0)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = 10.4.0.4)(PORT = 1521))
       (ADDRESS = (PROTOCOL = IPC)(KEY = EXTPROC1521))
     )
   )
 ```
+
+Save the file (Ctrl O - Press Enter - Ctrl X)
 
 Switch to oracle user
 
@@ -671,6 +652,42 @@ lsnrctl start
 lsnrctl status
 ```
 
+You should see the listener running with no errors.
+
+At this point, it may say The listener supports no services because the database has not yet registered.
+
+Connect to the PDB or CDB as SYS:
+
+```powershell
+sqlplus / as sysdba
+```
+
+Set the LOCAL_LISTENER (if needed)
+
+```sql
+SHOW PARAMETER local_listener;
+```
+
+If it is not pointing to your private IP, set it:
+
+```sql
+ALTER SYSTEM SET LOCAL_LISTENER='(ADDRESS=(PROTOCOL=TCP)(HOST=10.4.0.4)(PORT=1521))' SCOPE=BOTH;
+```
+
+Force Database to Register with Listener
+
+```sql
+ALTER SYSTEM REGISTER;
+```
+
+Check listener status again:
+
+```powershell
+exit # to go back to oracle user
+lsnrctl status
+exit # to go back to azadmin user
+```
+
 ### Step 21: Open port 1521 in OracleVM01 Firewall
 
 SSH to OracleVM01 from JumpboxVM01 with Windows Powershell
@@ -678,6 +695,7 @@ SSH to OracleVM01 from JumpboxVM01 with Windows Powershell
 ```powershell
 #Use the following command to connect from your laptop or Jumpbox:
 ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@<oracle-vm-private-ip>
+# ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@10.4.0.4
 ```
 
 Enable port 1521 in OracleVM01 Firewall
@@ -714,8 +732,11 @@ SSH to Oracle Database
 ```powershell
 #Use the following command to connect from your laptop or Jumpbox:
 ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@<oracle-vm-private-ip>
+# ssh -i $env:USERPROFILE\.ssh\oraclevm01-key-ed azadmin@10.4.0.4
 ```
+
 Connect to the database as SYSDBA
+
 
 ```powershell
 sqlplus / as sysdba

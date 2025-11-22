@@ -33,15 +33,18 @@ By using az account set, all future CLI commands will run under this subscriptio
 ```powershell
 # Variables
 $location="westus3"
-$resourceGroup="rg-pgsql03"
-$vnet="vnet-pgsql03"
-$backendSubnet="subnet-vnet-pgsql03-backend"
-$backendSubnetNSG="nsg-subnet-vnet-pgsql03-backend"
+$resourceGroup="rg-pgsql01"
+$vnet="vnet-pgsql01"
+$backendSubnet="subnet-vnet-pgsql01-backend"
+$backendSubnetNSG="nsg-subnet-vnet-pgsql01-backend"
 $hubResourceGroup="rg-hub"
 $hubVNet="vnet-hub"
 $jumpboxResourceGroup="rg-jumpbox"
 $jumpboxVNet="vnet-jumpbox"
-$serverName="azpgsqlprod01"
+$serverName="azpgsqldevtest01"
+$adminUser = "azpgsqladmin"
+$adminPassword = Read-Host -Prompt "Enter admin password:" -AsSecureString
+$cred = New-Object System.Management.Automation.PSCredential($adminUser, $adminPassword)
 ```
 
 💡 Note:
@@ -64,9 +67,9 @@ az group create `
 az network vnet create `
   --resource-group $resourceGroup `
   --name $vnet `
-  --address-prefix 10.6.0.0/16 `
+  --address-prefix 10.5.0.0/16 `
   --subnet-name $backendSubnet `
-  --subnet-prefix 10.6.0.0/24 `
+  --subnet-prefix 10.5.0.0/24 `
   --location $location
 ```
 
@@ -90,33 +93,33 @@ az network vnet subnet update `
 ### Step 6: Peer spoke vnets to hub and jumpbox
 
 ```powershell
-# Peer pgsql03 to hub
+# Peer pgsql01 to hub
 az network vnet peering create `
-  --name pgsql03-to-hub `
+  --name pgsql01-to-hub `
   --resource-group $resourceGroup `
   --vnet-name $vnet `
   --remote-vnet "/subscriptions/$subscriptionId/resourceGroups/$hubResourceGroup/providers/Microsoft.Network/virtualNetworks/$hubVNet" `
   --allow-vnet-access
 
-# Peer hub to pgsql03
+# Peer hub to pgsql01
 az network vnet peering create `
-  --name hub-to-pgsql03 `
+  --name hub-to-pgsql01 `
   --resource-group $hubResourceGroup `
   --vnet-name $hubVNet `
   --remote-vnet "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Network/virtualNetworks/$vnet" `
   --allow-vnet-access  
 
-# Peer pgsql03 to jumpbox
+# Peer pgsql01 to jumpbox
 az network vnet peering create `
-  --name pgsql03-to-jumpbox `
+  --name pgsql01-to-jumpbox `
   --resource-group $resourceGroup `
   --vnet-name $vnet `
   --remote-vnet "/subscriptions/$subscriptionId/resourceGroups/$jumpboxResourceGroup/providers/Microsoft.Network/virtualNetworks/$jumpboxVNet" `
   --allow-vnet-access
 
-# Peer jumpbox to pgsql03
+# Peer jumpbox to pgsql01
 az network vnet peering create `
-  --name jumpbox-to-pgsql03 `
+  --name jumpbox-to-pgsql01 `
   --resource-group $jumpboxResourceGroup `
   --vnet-name $jumpboxVNet `
   --remote-vnet "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Network/virtualNetworks/$vnet" `
@@ -135,19 +138,27 @@ Before creating the PostgreSQL server, link the shared private DNS zone (private
 az network private-dns link vnet create `
   --resource-group $hubResourceGroup `
   --zone-name privatelink.postgres.database.azure.com `
-  --name link-to-vnet-pgsql03-postgresql `
+  --name link-to-vnet-pgsql01-postgresql `
   --virtual-network "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Network/virtualNetworks/$vnet" `
   --registration-enabled false
 ```
 
 > ⚠️ Note:
-The link must be created in the same resource group as the DNS zone (rg-hub), even if your PostgreSQL server is deployed in another group (rg-pgsql03).
+The link must be created in the same resource group as the DNS zone (rg-hub), even if your PostgreSQL server is deployed in another group (rg-pgsql01).
 
-### Step 8: Create the Azure Database for PostgreSQL Flexible Server
+### Step 8: Register the provider for Azure Database for PostgreSQL Flexible Server in your subscription 
+
+```powershell
+# Register the Provider
+az provider register --namespace Microsoft.DBforPostgreSQL
+
+# Check registration status (It should return **Registered**)
+az provider show --namespace Microsoft.DBforPostgreSQL --query "registrationState"
+```
+
+### Step 9: Create the Azure Database for PostgreSQL Flexible Server
 
 This command provisions a PostgreSQL 15 Flexible Server with private network connectivity, moderate compute size, and storage suitable for testing Oracle migrations.
-
-⚠️ **Note:** Replace placeholder values like `<your-admin-username>` and `<your-admin-password>` with your own before running the commands.
 
 ```powershell
 # Create Azure PGSQL
@@ -163,24 +174,26 @@ az postgres flexible-server create `
    --storage-size 64 `
    --storage-auto-grow Enabled `
    --version 15 `
-   --admin-user <your-admin-username> `
-   --admin-password '<your-admin-password>'
+   --admin-user $adminUser `
+   --admin-password $adminPassword
 ```
 💡 Tip:
 - Use Standard_B2ms for cost efficiency during testing.
 - Storage auto-grow helps prevent issues during migration or data import.
 - You can later scale compute or storage easily with Azure CLI or Portal.
 
-### Step 9: Find the Private IP of Your PostgreSQL Server
+### Step 10: Find the Private IP of Your PostgreSQL Server
 
 Test network reachability from your Jumpbox or client VM within the same VNet or peered network.
 
 ```powershell
-Test-NetConnection <postgresql_endpoint_from_azure_portal> -Port <postgresql_port>
+Test-NetConnection <endpoint_from_azure_portal> -Port <postgresql_port>
+# Test-NetConnection <postgresql_endpoint_from_azure_portal> -Port 5432
+
 ```
 
 ```text
-ComputerName     : <postgresql_endpoint_from_azure_portal>
+ComputerName     : <endpoint_from_azure_portal>
 RemoteAddress    : <postgresql_private_ip>
 RemotePort       : <postgresql_port>
 InterfaceAlias   : Ethernet
@@ -188,17 +201,20 @@ SourceAddress    : <jumpboxvm01_private_ip>
 TcpTestSucceeded : True
 
 ✅ The TcpTestSucceeded: True result confirms successful connectivity over port <postgresql_port>.
-In this example, the PostgreSQL server's private IP is <jumpboxvm01_private_ip>.
+- In this example, the PostgreSQL server's private IP is <postgresql_private_ip> which is 10.5.0.4.
+Test-NetConnection 10.5.0.4 -Port 5432
 ```
 
-### Step 10: Create a database on Azure Database for PostreSQL for migration
+### Step 11: Create a database on Azure Database for PostreSQL for migration
 
 - Go to Azure Portal
 - Open Azure Database for PostgreSQL Felexible Server which you recently provisioned
 - Expand Settings
 - Click on Databases
 - Add a new database
-  - Name: customer_orders
+  - Name: customer_orders (Oracle database)
+- Add a new database
+  - Name: human_resources (Oracle database)
 
 💡 Note:
 You now have a fully provisioned Azure Database for PostgreSQL Flexible Server with private network access.

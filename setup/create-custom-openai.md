@@ -40,8 +40,8 @@ $hubResourceGroup="rg-hub"
 $hubVNet="vnet-hub"
 $jumpboxResourceGroup="rg-jumpbox"
 $jumpboxVNet="vnet-jumpbox"
-$serviceName="AzOpenAIModern01"
-$customSubdomain = "AzOpenAIModern01CSD"
+$serviceName="azopenaidevtest01"
+$customSubdomain = "sd-azopenaidevtest01"
 ```
 
 💡 Note:
@@ -64,9 +64,9 @@ az group create `
 az network vnet create `
   --resource-group $resourceGroup `
   --name $vnet `
-  --address-prefix 10.7.0.0/16 `
+  --address-prefix 10.6.0.0/16 `
   --subnet-name $backendSubnet `
-  --subnet-prefix 10.7.0.0/24 `
+  --subnet-prefix 10.6.0.0/24 `
   --location $location
 ```
 
@@ -145,7 +145,17 @@ az network private-dns link vnet create `
 > ⚠️ Note:
 The link must be created in the same resource group as the DNS zone (rg-hub), even if your Custom OpenAI is deployed in another group (rg-openai01).
 
-### Step 8: Create Custom OpenAI
+### Step 8: Register the provider for Azure OpenAI in your subscription 
+
+```powershell
+# Register the Provider
+az provider register --namespace Microsoft.CognitiveServices
+
+# Check registration status (It should return **Registered**)
+az provider show --namespace Microsoft.CognitiveServices --query "registrationState"
+```
+
+### Step 9: Create Custom OpenAI
 
 ```powershell
 # Create Custom OpenAI
@@ -214,7 +224,7 @@ az network private-endpoint dns-zone-group create `
   --zone-name privatelink.openai.azure.com
 ```
 
-### Step 9: Deploy a model inside the Azure OpenAI resource
+### Step 10: Deploy a model inside the Azure OpenAI resource
 
 ```powershell
 # Look at the available models in the region where $serviceName deployed
@@ -227,27 +237,6 @@ $models |
     Where-Object { $_.lifecycleStatus -eq "GenerallyAvailable" -and $_.name -match "gpt-4" } |
     Select-Object name, version, format, lifecycleStatus |
     Format-Table -AutoSize
-```
-
-```powershell
-# Deploy a model such as GPT-4o.
-az cognitiveservices account deployment create `
-  --name $serviceName `
-  --resource-group $resourceGroup `
-  --deployment-name "gpt4o-deployment" `
-  --model-name "gpt-4o" `
-  --model-version "2024-11-20" `
-  --model-format OpenAI `
-  --sku-capacity 1 `
-  --sku-name Standard
-
-<# Delete the model if needed as delete option is not visible in the Azure Portal
-
-az cognitiveservices account deployment delete `
-  --name $serviceName `
-  --resource-group $resourceGroup `
-  --deployment-name "gpt4o-deployment"
-#>
 ```
 
 ```powershell
@@ -279,14 +268,16 @@ az cognitiveservices account deployment list `
   -o table
 ```
 
-### Step 10: Review the Keys and Endpoint
+### Step 11: Review the Keys and Endpoint
 
-- Go to Resource Management -> Keys and Endpoint
+- Go to recently created Azure OpenAI service
+- Expand Resource Management
+- Click on Keys and Endpoint
 - Note the followings to be used in Oracle to PostgreSQL migration
   - KEY 1
   - Endpoint 
 
-### Step 10: Confirm the private endpoint status
+### Step 12: Confirm the private endpoint status
 
 ```powershell
 # Run a check to make sure the private endpoint is in "Approved" or "Succeeded" state (not "Pending")
@@ -296,7 +287,7 @@ az network private-endpoint show `
   --query "provisioningState" -o tsv
 ```
 
-### Step 11: Update Token per minute (TPM)
+### Step 13: Update Token per minute (TPM)
 
 - Migration requires TPM to be greated than 500K. You can set TPM in Powershell code. 
 - Go to https://ai.azure.com/
@@ -309,45 +300,50 @@ az network private-endpoint show `
 💡 **Note:**
 Review for more details. [Deployment types for Azure AI Foundry Models](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/deployment-types)
 
-### Step 11: Test from JumpboxVM01
+### Step 14: Test from JumpboxVM01
 
 ```powershell
 # Verify DNS resolution from the JumpboxVM01
-# In this example, it will be "Resolve-DnsName AzOpenAIModern01.openai.azure.com"
+
+# It will be "Resolve-DnsName azopenaidevtest01.openai.azure.com"
 Resolve-DnsName "$serviceName.openai.azure.com"
 
-# It fails: DNS name does not exist
+# If it fails, test with port number
 
-# Test connectivity from JumpboxVM01
-# In this example, it will be "Test-NetConnection AzOpenAIModern01.openai.azure.com -Port 443"
+# It will be "Test-NetConnection azopenaidevtest01.openai.azure.com -Port 443"
 Test-NetConnection "$serviceName.openai.azure.com" -Port 443
 
-# It fails: WARNING: Name resolution of AzOpenAIModern01.openai.azure.com failed
+# It fails: WARNING: Name resolution of azopenaidevtest01.openai.azure.com failed
 
 <#
 Follow the guidance here:
 
-1. You create your Azure OpenAI resource with custom subdomain: AzOpenAIModern01CSD
+1. You created your Azure OpenAI resource with custom subdomain called sd-azopenaidevtest01
 
-2. Azure assigns your endpoint: https://azopenaimodern01csd.openai.azure.com/
+2. Azure assigns your endpoint: https://sd-azopenaidevtest01.openai.azure.com/
 
 This is the public-facing FQDN — used in API calls and SDKs.
 
-3. You disable public access
+3. You disabled public access after you created Azure OpenAI service
 
     az resource update --set properties.publicNetworkAccess="Disabled"
 
-Azure blocks public resolution and routing to azopenaimodern01csd.openai.azure.com. It can no longer be resolved via public DNS.
+Azure blocks public resolution and routing to sd-azopenaidevtest01.openai.azure.com. It can no longer be resolved via public DNS.
 
-4. You then create a Private Endpoint and bind it to the Private DNS Zone
+4. You then created a Private Endpoint and bind it to the Private DNS Zone
 
     privatelink.openai.azure.com
 
 5. Azure injects a DNS record:
 
-    azopenaimodern01csd.privatelink.openai.azure.com → 10.x.x.x (private IP)
+    sd-azopenaidevtest01.privatelink.openai.azure.com → 10.x.x.x (private IP: 10.6.0.4)
 
 This record is only visible inside your VNet (or peered VNets) that are linked to the Private DNS Zone.
+
+These 2 should work when private endpoit is enabled.
+
+Resolve-DnsName sd-azopenaidevtest01.openai.azure.com
+Test-NetConnection sd-azopenaidevtest01.openai.azure.com -Port 443
 #>
 
 ```

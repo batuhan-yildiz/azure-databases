@@ -45,6 +45,7 @@ $adminPassword = Read-Host -Prompt "Enter admin password:" -AsSecureString
 $cred = New-Object System.Management.Automation.PSCredential($adminUser, $adminPassword)
 $serverName="azsqlmidevtest01"
 #$serverNameTemp="azsqlmimod01temp02"
+$spName = "sqlmi-spm-azuresqlmidevtest01"
 
 ```
 
@@ -261,5 +262,31 @@ az network nsg rule create `
 
 # Test the connection from JumpboxVM01
 Test-NetConnection <host_from_azure_portal> -Port 1433
+```
+
+### Step 10: Create a service principal for SQL MI
+
+```powershell
+# Create SPN for Azure SQL MI
+$spJson = az ad sp create-for-rbac `
+    --name $spName `
+    --skip-assignment `
+    --output json
+
+$sp = $spJson | ConvertFrom-Json
+
+$appId  = $sp.appId
+$secret = $sp.password
+$tenant = $sp.tenant
+
+Write-Host "SPN created:"
+Write-Host "  App ID:      $appId"
+Write-Host "  Secret:      $secret"
+Write-Host "  Tenant ID:   $tenant"
+
+# Assign Directory Reader role to the Service Principal
+
+# Register the SPN with your SQL MI
+
 ```
 
