@@ -6,7 +6,10 @@ Use it to understand the logical topology before deploying or extending addition
 
 ## Azure Environment
 
-[Azure Environment](.\)
+![Azure Environment](../images/Environment-Azure.png)
+
+![Onprem Environment](../images/Environment-OnPrem.png)
+
 
 ## Workloads
 
