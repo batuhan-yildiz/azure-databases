@@ -15,8 +15,8 @@
   - Connection Name: OracleVM01-SYSTEM
   - Username: system
   - Password: <system_password>
-  - Hostname: <OracleVM01_private_ip>
-  - Port: <OracleVM01_database_server_port_number>
+  - Hostname: 10.4.0.4
+  - Port: 1521
   - Service Name: XEPDB1
   - Test and Save connection. If connection fails, Review port in OracleVM01 Server Firewall, OracleVM01 Network Security Group.
 
@@ -56,7 +56,7 @@ GRANT CREATE SESSION TO MIGRATION_ROLE;
 GRANT SELECT_CATALOG_ROLE TO MIGRATION_ROLE;
 
 -- CREATE MIGRATION USER AND ASSIGN ROLE
-CREATE USER <migration_user> IDENTIFIED BY "<migration_user_password>";
+CREATE USER MIGRATIONUSER IDENTIFIED BY "<migration_user_password>";
 GRANT CREATE SESSION TO MIGRATIONUSER;
 GRANT MIGRATION_ROLE TO MIGRATIONUSER;
 ALTER USER MIGRATIONUSER DEFAULT ROLE ALL;
@@ -137,6 +137,8 @@ SELECT * FROM CO.CUSTOMERS WHERE ROWNUM <= 5;
   - Database Name: customer_orders (or select whatever user database you have for test)
   - Connection Name: PGSQLMigration
   - Server Group: Servers
-  - Click on Advanced
+  - Click on **Advanced** button
     - Port: 5432
+    - Application Name: vscode-pgsql (default)
+    - Connection Timeout: 15 (default)
   - Test and Save connection. 
