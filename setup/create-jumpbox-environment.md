@@ -47,6 +47,16 @@ $osDisk="disk1-JumpboxVM01"
 $rdpRuleName01 = "AllowRDP"
 $sourceIP01 = "<your-home-or-office-public-ip>/32"   # Replace with your IP address
 $priority01 = 100  # Lower number = higher priority
+
+# Linux VM settings
+$vmNameLinux="JumpboxVM02"
+$networkInterfaceLinux="nic-JumpboxVM02"
+$publicIPlinux="pip-JumpboxVM02"
+$osDiskLinux="disk1-JumpboxVM02"
+$adminUserLinux="azadmin"
+
+$SSH_KEY_NAME="jumpboxvm02-key-ed"
+
 ```
 
 💡 Note:
@@ -115,7 +125,7 @@ az network vnet peering create `
 ### Step 7: Create network interface with private and public IP to be used by JumpboxVM01 Virtual Machine
 
 ```powershell
-# Create public IP
+# Create public IP (Windows)
 az network public-ip create `
   --resource-group $resourceGroup `
   --name $publicIP `
@@ -123,7 +133,7 @@ az network public-ip create `
   --allocation-method Static `
   --location $location
 
-# Create network interface with private and public IP
+# Create network interface with private and public IP (Windows VM)
 az network nic create `
   --resource-group $resourceGroup `
   --name $networkInterface `
@@ -131,6 +141,23 @@ az network nic create `
   --subnet $backendSubnet `
   --network-security-group $backendSubnetNSG `
   --public-ip-address $publicIP `
+  --location $location
+
+# Create public IP (Linux)
+az network public-ip create `
+  --resource-group $resourceGroup `
+  --name $publicIPLinux `
+  --sku Standard `
+  --allocation-method Static `
+  --location $location
+
+# Create network interface with private (Linux VM)
+az network nic create `
+  --resource-group $resourceGroup `
+  --name $networkInterfaceLinux `
+  --vnet-name $vnet `
+  --subnet $backendSubnet `
+  --public-ip-address $publicIPlinux `
   --location $location
 ```
 
@@ -166,7 +193,9 @@ az network private-dns link vnet create `
   --registration-enabled false
 ```
 
-### Step 9: Create a jumpbox vm
+### Step 9: Create a jumpbox and linux vm
+
+#### Create a jumpbox vm
 
 The Jumpbox VM is a small, secure virtual machine deployed in its own dedicated VNet, which is peered to hub VNet and and will be peered to other Vnets like the PostgreSQL VNet.
 
@@ -193,7 +222,7 @@ Typical use cases include:
 - license-type Windows_Server: Save up to 49% with a license you already own using Azure Hybrid Benefit. You need to confirm you have an eligible Windows Server license with Software Assurance or Windows Server subscription to apply this Azure Hybrid Benefit.
 
 ```powershell
-# Create the virtual machine
+# Create the virtual machine (windows)
 az vm create `
   --resource-group $resourceGroup `
   --name $vmName `
@@ -205,7 +234,52 @@ az vm create `
   --admin-password '<your-admin-password>' `
   --os-disk-name $osDisk `
   --license-type Windows_Server
-```  
+```
+
+#### Generate an SSH key pair to securely connect to the Linux VM
+
+💡 Note:
+SSH (Secure Shell) is the most common method for securely accessing Linux VMs.
+It encrypts your connection, ensuring that credentials and commands cannot be intercepted.
+See [Microsoft Learn: Connect to a Linux VM](https://learn.microsoft.com/en-us/azure/virtual-machines/linux-vm-connect?tabs=Linux) for more details.
+
+```powershell
+# Create .ssh folder
+New-Item -ItemType Directory -Path "$env:USERPROFILE\.ssh" -Force
+
+# Generate SSH key pair
+ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\$SSH_KEY_NAME" -q -N '""'
+```
+
+| Parameter                 | Description                                                                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-t ed25519`              | Specifies the key type — **ED25519** is a modern, fast, and secure elliptic-curve algorithm.                                                               |
+| `-f "$env:USERPROFILE\.ssh\$SSH_KEY_NAME"` | Defines the file path and name for your key pair.<br>📁 **Public key:** `~/.ssh/oraclevm01-key-ed.pub` <br>🔒 **Private key:** `~/.ssh/oraclevm01-key-ed` |
+| `-q`                      | Runs quietly without printing progress messages.                                                                                                           |
+| `-N '""'`                   | Creates a key with an **empty passphrase** (no password prompt when connecting).                                                                           |
+
+> ⚠️ Security Note:
+You can choose to set a passphrase (-N "your-passphrase") for extra protection if you’re storing your private key on a shared or less secure system.
+
+#### Create a linux vm
+
+```powershell
+# Create the virtual machine (linux)
+az vm create `
+  --resource-group $resourceGroup `
+  --name $vmNameLinux `
+  --location $location `
+  --nics $networkInterfaceLinux `
+  --image Ubuntu2204 `
+  --size Standard_B2ms `
+  --admin-username $adminUserLinux `
+  --ssh-key-values "$env:USERPROFILE\.ssh\$SSH_KEY_NAME.pub" `
+  --authentication-type ssh `
+  --security-type "TrustedLaunch" `
+  --enable-agent true `
+  --os-disk-name $osDiskLinux `
+  --os-disk-size-gb 64
+``` 
 
 ### Step 10: Allow RDP access to the Jumpbox
 
@@ -255,3 +329,68 @@ Capture the Public IP of the Jumbox to connect through RDP
   - Connections
   - Query History
   - Migrations
+
+### Step 13: Connect to Linux VM
+
+This guide explains how to connect to your Linux virtual machine from the JumpboxVM01 using SSH (Secure Shell).
+
+The connection requires using the private key you generated earlier.
+
+💡 Note:
+SSH provides a secure, encrypted command-line connection to your VM.
+
+#### Locate Your SSH Keys in Windows Powershell
+
+When you generated the SSH key, two files were created.
+
+```powershell
+# List your SSH keys in Windows Powershell:
+Get-ChildItem "$env:USERPROFILE\.ssh"
+```
+
+You should see both key files listed:
+
+| File                    | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `jumpboxvm02-key-ed`     | Private key - used to authenticate to your VM     |
+| `jumpboxvm02-key-ed.pub` | Public key - uploaded to Azure during VM creation |
+
+#### Copy the private key to Jumpbox01VM and secure the file
+
+RDP to Jumpbox01VM
+
+```powershell
+# Create the .ssh folder if it doesn't exist
+New-Item -ItemType Directory -Path "$env:USERPROFILE\.ssh" -Force
+```
+
+Copy the jumpboxvm02-key-ed file from your machine to Jumpbox01VM "$env:USERPROFILE\.ssh" folder.
+
+Secure the Key File in Jumpbox01VM: You must set the correct permissions on the key to ensure SSH will accept it.
+
+```powershell
+# Run in PowerShell (Admin)
+icacls "$env:USERPROFILE\.ssh\jumpboxvm02-key-ed" /inheritance:r /grant:r "${env:USERNAME}:R"
+```
+
+#### Connect to the Linux VM from Jumpbox01
+
+Open Windows Powershell with Admin and run the following command
+
+```powershell
+#Use the following command to connect from Jumpbox:
+ssh -i $env:USERPROFILE\.ssh\jumpboxvm02-key-ed azadmin@<linux-vm-private-ip>
+# ssh -i $env:USERPROFILE\.ssh\jumpboxvm02-key-ed azadmin@10.1.0.5
+```
+
+💡 Note:
+Replace `<oracle-vm-private-ip>` with your actual Oracle VM's private IP address
+
+If you receive the following message, type **yes** then press enter. SSH will remember this host in your known_hosts file for future sessions.
+
+```text
+The authenticity of host '10.5.0.4 (10.5.0.4)' can't be established.
+ED25519 key fingerprint is SHA256:GAqQ5DbLkkPox/5iNSwcG/vPCZxBcqgtAuOtfMEawvI.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+```
