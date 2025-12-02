@@ -344,6 +344,8 @@ az network vnet peering create `
   --allow-forwarded-traffic
 ```
 
+Networrk peering for our scenario was not sufficient because nested VMs could go connect to external networks and were not visible to any external networks other than host server (Hyper-V enabled azure virtual machine). We used [point-to-site VPN](https://learn.microsoft.com/en-us/azure/vpn-gateway/point-to-site-about) between the nested VMs and Azure SQL Managed Instance. If you need support to create P2S VPN, follow the instructions [here](https://github.com/batuhan-yildiz/azure-databases/blob/main/setup/create-azuresqlmi-environment.md#step-11-create-a-vpn-gateway).
+
 ### Step 10: Network ports between the environments
 
 #### Source (SQL Server Host)

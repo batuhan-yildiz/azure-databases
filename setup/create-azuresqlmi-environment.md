@@ -323,6 +323,8 @@ Write-Host "  Tenant ID:   $tenant"
 
 ### Step 11: Create a VPN Gateway
 
+It will be used for a database migration from a nested VM to Azure SQL Managed Instance. 
+
 ```powershell
 variables for gateway
 $gwName = "gw-$vnet"
