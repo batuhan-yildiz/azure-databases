@@ -617,4 +617,16 @@ ora2pg -t COPY -c $namespace/config/ora2pg.conf
 💡 Note:
 - Even if you pass `-o data.sql` and/or `-b $namespace/data`, the COPY process will ignore them. Once it sees PGSQL paramaters are enabled and set in configration file, it will directly import into PGSQL
 
+### Step 14: Validation
 
+ora2pg -t TEST is a post-migration validation step. It checks:
+
+- Column count: Compares Oracle source table definition vs PostgreSQL target table definition.
+- Index count: Compares indexes in Oracle vs PostgreSQL.
+- Primary key / foreign keys: Checks if they exist on both sides.
+- Constraints: Checks NOT NULL, CHECK, UNIQUE differences.
+- Table existence: Checks if all tables are created in PostgreSQL.
+
+```powershell
+ora2pg -t TEST -c $namespace/config/ora2pg.conf > migration_validation.txt
+```

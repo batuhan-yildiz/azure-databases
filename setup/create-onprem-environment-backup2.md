@@ -47,47 +47,34 @@ $rdpRuleName01 = "AllowRDP"
 $sourceIP01 = "<your-home-or-office-public-ip>/32"   # Replace with your IP address
 $priority01 = 100  # Lower number = higher priority
 
-# Host/Azure
-$hostAzureIP = "10.2.0.4" # Azure HyperV host NIC - update if needed
-
 # HyperV Configuration
-$switchName = "InternalSwitch"
-$hostInternalIP = "10.200.0.1"
-$nestedPrefix = "10.200.0.0/24"
-$natName = "NestedNAT"
-$gatewayNestedVMs = $hostInternalIP
-$prefixLen = 24
+$switchName = "ExternalSwitch"
+$hostNic = "Ethernet"
 
-# Nested VM addressing
 $nestedVMs          = @(
-    @{Name="DC01";   IP="10.200.0.10"}, 
-    @{Name="Node01"; IP="10.200.0.11"}, 
-    @{Name="Node02"; IP="10.200.0.12"}, 
-    @{Name="Node03"; IP="10.200.0.13"}, 
-    @{Name="Node04"; IP="10.200.0.14"}, 
-    @{Name="Node05"; IP="10.200.0.15"} 
+    @{Name="DC01";   IP="10.2.0.50"}, 
+    @{Name="Node01"; IP="10.2.0.51"}, 
+    @{Name="Node02"; IP="10.2.0.52"}, 
+    @{Name="Node03"; IP="10.2.0.53"}, 
+    @{Name="Node04"; IP="10.2.0.54"}, 
+    @{Name="Node05"; IP="10.2.0.55"} 
 )
-
-# Paths
 $isoPath = "C:\Products\WindowsServer2022.iso"
 $vmStorePath = "E:\HyperV\Virtual Hard Disks"
 $vmConfigStorePath = "E:\HyperV\Virtual Machines"
 
-# VM Sizing
+$gatewayNestedVMs = "10.2.0.1"
+$prefixLen = 24
+
+# Nested VMs General
 $vmMemoryDC = 4GB
 $vmMemoryNode = 6GB
 $vmProcessorCount = 2
 $vmVhdSizeGB = 80GB   # size for each nested VM VHDX
-
-# Credentials
 $localAdminUser = "Administrator"  # will be used when automating into guest
 $plainPassword = Read-Host -Prompt "Enter nested VMs local Administrator password (will be used for PowerShell Direct)" -AsSecureString
 $cred = New-Object System.Management.Automation.PSCredential($localAdminUser, $plainPassword)
-
-# Domain
 $domainName = "contoso.local"
-$domainNetbios = ($domainName.Split('.')[0])
-$domainAdminUPN= "Administrator@$domainName"
 
 ```
 
@@ -244,6 +231,9 @@ az network nsg rule create `
   --description "Allow RDP access to Jumpbox from trusted IP"
 ```
 
+💡 Note:
+Capture the Public IP of the Jumbox to connect through RDP
+
 ### Step 10: Configure HyperHostVM01
 
 RDP to HyperHostVM01 VM
@@ -287,41 +277,18 @@ Install-WindowsFeature -Name Hyper-V -IncludeAllSubFeature -IncludeManagementToo
 # Enable IP routing in Windows so host can forward traffic
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "IPEnableRouter" -Value 1
 
-# Create Internal vSwitch
+# Create External vSwitch
 if (-not (Get-VMSwitch -Name $switchName -ErrorAction SilentlyContinue)) {
     New-VMSwitch -Name $switchName `
-                 -SwitchType Internal 
-    Write-Host "Created internal switch: $switchName"
+                 -NetAdapterName $hostNIC `
+                 -SwitchType External `                 
+                 -AllowManagementOS $true
+    Write-Host "Created external switch: $switchName"
 } `
 else { Write-Host "Switch $switchName already exists" }
 
 # Confirm the switch
 Get-VMSwitch | Format-Table Name, SwitchType, NetAdapterInterfaceDescription
-```
-
-#### Assign IP to host on the internal switch
-
-```powershell
-# Assign IP to host vEthernet interface bound to the new switch
-$iface = "vEthernet ($switchName)"
-Write-Host "Assigning IP $hostInternalIP/$prefixLen to interface $iface..."
-# remove any existing duplicate IP on that interface first (safe)
-Get-NetIPAddress -InterfaceAlias $iface -ErrorAction SilentlyContinue | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
-New-NetIPAddress -InterfaceAlias $iface -IPAddress $hostInternalIP -PrefixLength $prefixLen
-# Optional: enable forwarding on the host interface
-Set-NetIPInterface -InterfaceAlias $iface -Forwarding Enabled
-```
-
-#### Create NAT for internal subnet
-
-```powershell
-# Create NAT so nested VMs have internet outbound via host
-if (Get-NetNat -Name $natName -ErrorAction SilentlyContinue) {
-  Remove-NetNat -Name $natName -Confirm:$false -ErrorAction SilentlyContinue
-  Write-Host "Existing NAT $natName has been removed."
-}
-Write-Host "Creating NAT $natName for $internalPrefix..."
-New-NetNat -Name $natName -InternalIPInterfaceAddressPrefix $internalPrefix | Out-Null
 ```
 
 #### Create the VMs
@@ -331,8 +298,11 @@ foreach ($vm in $nestedVMs) {
 
     $nestedVMName   = $vm.Name
     $vhdPath = "$vmStorePath\$nestedVMName  .vhdx"
-    $MemoryStartupBytes = if ($nestedVMName -eq "DC01") { $vmMemoryDC } else { $vmMemoryNode }
-    
+    $MemoryStartupBytes = $vmMemoryDC
+
+    if ($nestedVMName   -ne "DC01") { $MemoryStartupBytes = $vmMemoryNode }
+
+
     # Create VM
     New-VM -Name $nestedVMName   `
            -MemoryStartupBytes $MemoryStartupBytes `
@@ -340,8 +310,7 @@ foreach ($vm in $nestedVMs) {
            -SwitchName $switchName `
            -Generation 2 `
            -NewVHDPath $vhdPath `
-           -NewVHDSizeBytes $vmVhdSizeGB `
-           -Path $vmConfigStorePath
+           -NewVHDSizeBytes $vmVhdSizeGB
 
     # CPU
     Set-VMProcessor -VMName $nestedVMName   -Count $vmProcessorCount
@@ -349,23 +318,24 @@ foreach ($vm in $nestedVMs) {
     # Attach ISO for installation
     Add-VMDvdDrive -VMName $nestedVMName   -Path $isoPath
 
-    # Enable MAC spoofing (host-side)
-    Set-VMNetworkAdapter -VMName $nestedVMName -MacAddressSpoofing On    
-
-    Write-Host "VM $nestedVMName created."
+    Write-Host "VM $nestedVMName   created."
 }
 ```
 
 #### Complete OS installation in each VM console
 
 ```powershell
-# Start the VM and Complete OS installation one by one
+# Start each VM to install the OS
 
-foreach ($vm in $nestedVMs) {
-    Start-VM -Name $vm.Name
-}
+# Start the VM and Complete OS installation one by one
+Start-VM -Name $nestedVMs[0].Name
+Start-VM -Name $nestedVMs[1].Name
+Start-VM -Name $nestedVMs[2].Name
+Start-VM -Name $nestedVMs[3].Name
+Start-VM -Name $nestedVMs[4].Name
+Start-VM -Name $nestedVMs[5].Name
 ```
-#### Rename computers
+#### Change computer name
 
 ```powershell
 # Change the computer name
@@ -379,68 +349,48 @@ foreach ($vm in $nestedVMs) {
         Rename-Computer -NewName $newName -Force -Restart
     } -ArgumentList $nestedVMName  
 
-    Write-Host "VM $nestedVMName computer name updated."
+    Write-Host "VM $nestedVMName   computer name updated."
 }  
 ```
 
-#### Configure static network inside VMs
+#### Configure network inside DC01
 
 ```powershell
-foreach ($vm in $nestedVMs) {
-    $nestedVMName = $vm.Name
-    $nestedVMIP = $vm.IP
+Invoke-Command -VMName $nestedVMs[0].Name -Credential $cred -ScriptBlock {
+    param($ip, $prefix, $gateway)
+    
+    $if = Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.Name -like "*Ethernet*" } | Select-Object -First 1
+    if ($null -eq $if) { throw "Cannot find network adapter inside guest." }
+    $ifAlias = $if.Name
 
-    if ($nestedVMName -eq "DC01") {
-        Invoke-Command -VMName $nestedVMName -Credential $cred -ScriptBlock {
-            param($ip, $prefix, $gateway)
-            
-            $if = Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.Name -like "*Ethernet*" } | Select-Object -First 1
-            if ($null -eq $if) { throw "Cannot find network adapter inside guest." }
-            $ifAlias = $if.Name
+    # Remove DHCP IPv4
+    Get-NetIPAddress -InterfaceAlias $ifAlias -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
 
-            # Remove DHCP IPv4
-            Get-NetIPAddress -InterfaceAlias $ifAlias -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
+    # Set static IP
+    New-NetIPAddress -InterfaceAlias $ifAlias -IPAddress $ip -PrefixLength $prefix -DefaultGateway $gateway
 
-            # Set static IP
-            New-NetIPAddress -InterfaceAlias $ifAlias -IPAddress $ip -PrefixLength $prefix -DefaultGateway $gateway
-
-            # Set DNS to self
-            Set-DnsClientServerAddress -InterfaceAlias $ifAlias -ServerAddresses $ip
-
-        } -ArgumentList $nestedVMs[0].IP, $prefixLen, $gatewayNestedVMs
-    } else {
-        Invoke-Command -VMName $nestedVMName -Credential $cred -ScriptBlock {
-            param($ip, $prefix, $gateway, $dns)
-            $if = Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.Name -like "*Ethernet*" } | Select-Object -First 1
-            if ($null -eq $if) { throw "Cannot find network adapter inside guest." }
-            $ifAlias = $if.Name
-
-            # Remove DHCP IP
-            Get-NetIPAddress -InterfaceAlias $ifAlias -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
-
-            # Set static IP
-            New-NetIPAddress -InterfaceAlias $ifAlias -IPAddress $ip -PrefixLength $prefix -DefaultGateway $gateway
-
-            # Set DNS to DC01
-            Set-DnsClientServerAddress -InterfaceAlias $ifAlias -ServerAddresses $dns
-        } -ArgumentList $nestedVMIP, $prefixLen, $gatewayNestedVMs, $nestedVMs[0].IP        
-    }
-}
+    # Set DNS to self
+    Set-DnsClientServerAddress -InterfaceAlias $ifAlias -ServerAddresses $ip
+} -ArgumentList $nestedVMs[0].IP, $prefixLen, $gatewayNestedVMs
 ```
 
 #### Promote DC01 to Domain Controller
 
 ```powershell
+$domainNetbios = ($domainName.Split('.')[0])
 
 Invoke-Command -VMName $nestedVMs[0].Name -Credential $cred -ScriptBlock {
     param($domainName, $domainNetbios, $plainPassword)
 
     Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
 
+    # convert password string to secure string
+    $securePwd = ConvertTo-SecureString $plainPassword -AsPlainText -Force
+
     # Promote to DC (creates forest)
     Install-ADDSForest -DomainName $domainName `
                        -DomainNetbiosName $domainNetbios `
-                       -SafeModeAdministratorPassword $plainPassword `
+                       -SafeModeAdministratorPassword $securePwd `
                        -InstallDns `
                        -Force
 } -ArgumentList $domainName, $domainNetbios, $plainPassword
@@ -493,9 +443,39 @@ foreach ($user in $users) {
 Add-ADGroupMember -Identity $groupName -Members "sqladmin"
 ```
 
+#### Configure network for Nodes (Node01 → Node05)
+
+```powershell
+foreach ($vm in $nestedVMs) {
+
+    $nestedVMName   = $vm.Name
+    $nestedVMIP   = $vm.IP
+
+    if ($nestedVMName -ne "DC01") { 
+
+        Invoke-Command -VMName $nestedVMName -Credential $cred -ScriptBlock {
+            param($ip, $prefix, $gateway, $dns)
+            $if = Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.Name -like "*Ethernet*" } | Select-Object -First 1
+            if ($null -eq $if) { throw "Cannot find network adapter inside guest." }
+            $ifAlias = $if.Name
+
+            # Remove DHCP IP
+            Get-NetIPAddress -InterfaceAlias $ifAlias -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
+
+            # Set static IP
+            New-NetIPAddress -InterfaceAlias $ifAlias -IPAddress $ip -PrefixLength $prefix -DefaultGateway $gateway
+
+            # Set DNS to DC01
+            Set-DnsClientServerAddress -InterfaceAlias $ifAlias -ServerAddresses $dns
+        } -ArgumentList $nestedVMIP, $prefixLen, $gatewayNestedVMs, $nestedVMs[0].IP
+    }
+}
+```
+
 #### Join Nodes to Domain
 
 ```powershell
+$domainAdminUPN= "Administrator@$domainName"
 
 foreach ($vm in $nestedVMs) {
 
@@ -510,6 +490,7 @@ foreach ($vm in $nestedVMs) {
 
             Add-Computer -DomainName $domainName -Credential $domainCred -Restart
         } -ArgumentList $domainName, $domainAdminUPN, $plainPassword
+
     }
 }
 ```
@@ -532,9 +513,20 @@ Enable-NetFirewallRule -DisplayGroup "File and Printer Sharing"
 # Optional: check rule
 Get-NetFirewallRule -DisplayGroup "File and Printer Sharing" | ft DisplayName,Enabled
 
+# Enable SQL Port
+New-NetFirewallRule -DisplayName "SQL Server 1433" -Direction Inbound -Protocol TCP -LocalPort 1433 -Action Allow
 ```
 
-- logout and login to Node as domain user sqladmin (contoso\sqladmin) which is local admin on Node
+- logout and login to Node as domain user sqladmin which is local admin on Node
+
+
+
+
+
+
+
+
+
 
 #### Install Windows Cluster
 
@@ -615,7 +607,7 @@ foreach ($acct in $accounts) {
 }
 ```
 
-Connect to Node01, Node02 and run the code inside the nested VMs to Install Failover Clustering feature through Powershell
+Connect to Node01, Node02 and Node03 and run the code inside the nested VMs to Install Failover Clustering feature through Powershell
 
 ```powershell
 # Run inside each node
@@ -626,17 +618,17 @@ Connect to Node01 and run the code inside the nested VM to setup the cluster inc
 
 ```powershell
 # Variables
-$ClusterName = "WinCluster01"
-$ClusterIP   = "10.200.0.51"
+$ClusterName = "Cluster01"
+$ClusterIP   = "10.2.100.51"
 
 # Runs Microsoft’s required cluster validation tests: 
 # Network tests, Storage tests, System configuration, Domain checks, Node heartbeat checks
-Test-Cluster -Node Node01, Node02
+Test-Cluster -Node Node01, Node02, Node03
 
 # Create failover cluster
 New-Cluster `
     -Name $ClusterName `
-    -Node Node01, Node02 `
+    -Node Node01, Node02, Node03 `
     -StaticAddress $ClusterIP `
     -NoStorage
 
@@ -653,7 +645,6 @@ Enable-NetFirewallRule -DisplayGroup "Failover Clusters"
 Create a new disk and attach it to DC01 (Run on HostVM Powershell)
 
 ```powershell
-$dcVmName = $nestedVMs[0].Name
 $dcVhdShared = Join-Path $vmStorePath $dcVmName"Shared.vhdx"
 $dcVhdSharedSizeGB = 256
 
@@ -700,20 +691,20 @@ $vdData  = Join-Path $sharedFolder "Cluster01Shared01.vhdx"
 
 # Create iSCSI virtual disks (file-backed)
 New-IscsiVirtualDisk -Path $vdQuorum -Size 4GB -Description "Cluster01 Quorum Disk"
-New-IscsiVirtualDisk -Path $vdData -Size 32GB -Description "Cluster01 SharedDisk01"
+New-IscsiVirtualDisk -Path $vdData -Size 32GB -Description "Cluster01 Shared Disk 01"
 
 # Create an iSCSI target
 $targetName = "Target-Cluster01"
-New-IscsiServerTarget -TargetName $targetName -InitiatorId @("IPAddress:10.200.0.11","IPAddress:10.200.0.12")
+New-IscsiServerTarget -TargetName $targetName -InitiatorId @("IPAddress:10.2.100.12","IPAddress:10.2.100.13","IPAddress:10.2.100.14")
 Get-IscsiServerTarget -TargetName $targetName
 <# 
 - If you want to add another IP, you need to use Set-IscsiServerTarget to update the InitiatorId list.
 - However, Set-IscsiServerTarget replaces the entire list, so you need to include all previous IPs along with the new one.
 
 Set-IscsiServerTarget -TargetName "Target-Cluster01" -InitiatorId @(
-    "IPAddress:10.200.0.11",
-    "IPAddress:10.200.0.12",
-    "IPAddress:10.200.0.13")
+    "IPAddress:10.2.100.12",
+    "IPAddress:10.2.100.13",
+    "IPAddress:10.2.100.14")
 #>
 
 # Map virtual disks to target
@@ -728,15 +719,15 @@ Optionally restrict initiators (recommended) — get IQN from Node01/Node02 (see
 #>
 ```
 
-#### Configure initiators on Node01 and Node02 (run on each node)
+#### Configure initiators on Node01, Node02 and Node03 (run on each node)
 
 ```powershell
 # Ensure Microsoft iSCSI Initiator service runs
 Set-Service -Name MSiSCSI -StartupType Automatic
 Start-Service -Name MSiSCSI
 
-# Add the target portal (DC01 ip is 10.200.0.10 — adjust if different):
-$targetPortalIP = "10.200.0.10"
+# Add the target portal (DC01 ip is 10.2.100.11 — adjust if different):
+$targetPortalIP = "10.2.100.11"
 New-IscsiTargetPortal -TargetPortalAddress $targetPortalIP -ErrorAction SilentlyContinue
 
 # Discover targets
@@ -804,12 +795,10 @@ If Get-ClusterDisk does not work, troubleshoot the problem.
 You can use the following as alternative
 
 - Click on your cluster, and in the Actions pane (right side), click More Actions → Configure Cluster Quorum Settings.
-- Configure Cluster Quorum Wizard opens. Click Next.
+- Quorum Configuration Wizard opens. Click Next.
 - Choose Select the quorum witness → click Next.
-- Select Configure a disk witness → Click Next.
-- Select the quorum disk → Click Next,
-- Review settings, then click Next.
-- Click on Finish.
+- Select Configure a disk witness → Select the quorum disk.
+- Click Next, review settings, then click Finish
 - Click on your cluster and review Cluster Core Resources.
 #>
 ```
@@ -850,16 +839,6 @@ $diskToAdd = Get-ClusterAvailableDisk | Where-Object { ($_.Number -eq 2) }
 Add-ClusterDisk -InputObject $diskToAdd
 Write-Host "Cluster disk added: $($diskToAdd.Name)"
 # Click Storage → Disks to see all available disks. You should see your shared disk listed as Available Storage.
-
-<# 
-Create a new Group for SQL
-- Right click on the Roles and select Create Empty Role
-- Right click on the recently created role and select properties.
-- Rename the role name to "SQL Workload01"
-- Expand Storage and select Disks.
-- Right click on the "Available Storage", which is for SQL data disk, Select "More Actions" and "Assign to Another Role".
-- Select "SQL Workload01" role, and click on OK.
-#>
 ```
 
 #### Install SQL Server
@@ -867,77 +846,50 @@ Create a new Group for SQL
 You can create a scenario like below
 
 - Install SQL Server Failover Cluster on Node01 and Node02
-  - Failover Group: SQL Workload01
+  - Failover Group: SQL Workload 01
   - Network Name: SQLCluster01
-  - Network: 10.200.0.71
-  - Instance: SQL Server 2019 on MSSQLSERVER (1433)
+  - Network: 10.2.100.71
+  - Instance: MSSQLSERVER
   - Service: Domain user account
-- Install SQL Server Standalone on Node01 
-  - Instance 2: SQL Server 2019 on INST01 (60636)
-- Install SQL Server Standalone on Node02 
-  - Instance 2: SQL Server 2019 on INST01 (63066)
+  - SQL Server Version: SQL Server 2019
 - Install SQL Server Standalone on Node03
-  - Instance 1: SQL Server 2019 on MSSQLSERVER (1433)
-  - Instance 2: SQL Server 2019 on INST01 (63168)
+  - Instance 1: INST01
+  - Instance 2: INST02
   - Service: Domain user account
+  - SQL Server Version: SQL Server 2019
 - Install SQL Server Standalone on Node04
-  - Instance 1: SQL Server 2014 on MSSQLSERVER (1433)
-  - Instance 2: SQL Server 2016 on INST01 (62541)
-  - Instance 3: SQL Server 2019 on INST02 (49859)
+  - Instance 1: MSSQLSERVER
+  - Instance 2: INST01
+  - Instance 3: INST02
   - Service: Domain user account
+  - SQL Server Version: SQL Server 2014 on MSSQLSERVER
+  - SQL Server Version: SQL Server 2016 on INST01
+  - SQL Server Version: SQL Server 2019 on INST02
 - Enable firewall for SQL ports in each node
+
 
     ```powershell
     # Node01
+
     New-NetFirewallRule -DisplayName "SQL_TCP_1433" -Direction Inbound -Protocol TCP -LocalPort 1433 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_UDP_1434" -Direction Inbound -Protocol UDP -LocalPort 1434 -Action Allow -Profile Any
-    New-NetFirewallRule -DisplayName "SQL_TCP_60636" -Direction Inbound -Protocol TCP -LocalPort 60636 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_TCP_5022" -Direction Inbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any
-    New-NetFirewallRule -DisplayName "SQL_TCP_5022_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any    
-    New-NetFirewallRule -DisplayName "SQL_TCP_5023" -Direction Inbound -Protocol TCP -LocalPort 5023 -Action Allow 
-    New-NetFirewallRule -DisplayName "SQL_TCP_5023_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5023 -Action Allow -Profile Any 
-    New-NetFirewallRule -DisplayName "MI-Link-Outbound-11000-11999" `
-    -Direction Outbound `
-    -LocalPort 11000-11999 `
-    -Protocol TCP `
-    -Action Allow `
-    -Profile Any
-    New-NetFirewallRule -DisplayName "MI-Link-Inbound-11000-11999" `
-    -Direction Inbound `
-    -LocalPort 11000-11999 `
-    -Protocol TCP `
-    -Action Allow `
-    -Profile Any  
 
     # Node02
+
     New-NetFirewallRule -DisplayName "SQL_TCP_1433" -Direction Inbound -Protocol TCP -LocalPort 1433 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_UDP_1434" -Direction Inbound -Protocol UDP -LocalPort 1434 -Action Allow -Profile Any
-    New-NetFirewallRule -DisplayName "SQL_TCP_63066" -Direction Inbound -Protocol TCP -LocalPort 63066 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_TCP_5022" -Direction Inbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any
-    New-NetFirewallRule -DisplayName "SQL_TCP_5022_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any    
-    New-NetFirewallRule -DisplayName "SQL_TCP_5023" -Direction Inbound -Protocol TCP -LocalPort 5023 -Action Allow 
-    New-NetFirewallRule -DisplayName "SQL_TCP_5023_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5023 -Action Allow -Profile Any 
-    New-NetFirewallRule -DisplayName "MI-Link-Outbound-11000-11999" `
-    -Direction Outbound `
-    -LocalPort 11000-11999 `
-    -Protocol TCP `
-    -Action Allow `
-    -Profile Any
-    New-NetFirewallRule -DisplayName "MI-Link-Inbound-11000-11999" `
-    -Direction Inbound `
-    -LocalPort 11000-11999 `
-    -Protocol TCP `
-    -Action Allow `
-    -Profile Any  
 
     # Node03
-    New-NetFirewallRule -DisplayName "SQL_TCP_1433" -Direction Inbound -Protocol TCP -LocalPort 1433 -Action Allow -Profile Any
+
+    New-NetFirewallRule -DisplayName "SQL_TCP_49986" -Direction Inbound -Protocol TCP -LocalPort 49986 -Action Allow -Profile Any
+    New-NetFirewallRule -DisplayName "SQL_TCP_50123" -Direction Inbound -Protocol TCP -LocalPort 50123 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_UDP_1434" -Direction Inbound -Protocol UDP -LocalPort 1434 -Action Allow -Profile Any
-    New-NetFirewallRule -DisplayName "SQL_TCP_63168" -Direction Inbound -Protocol TCP -LocalPort 63168 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_TCP_5022" -Direction Inbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any
-    New-NetFirewallRule -DisplayName "SQL_TCP_5022_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any    
-    New-NetFirewallRule -DisplayName "SQL_TCP_5023" -Direction Inbound -Protocol TCP -LocalPort 5023 -Action Allow 
-    New-NetFirewallRule -DisplayName "SQL_TCP_5023_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5023 -Action Allow -Profile Any 
+    New-NetFirewallRule -DisplayName "SQL_TCP_5023" -Direction Inbound -Protocol TCP -LocalPort 5023 -Action Allow -Profile Any
+    New-NetFirewallRule -DisplayName "SQL_TCP_5022_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any
+    New-NetFirewallRule -DisplayName "SQL_TCP_5023_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5023 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "MI-Link-Outbound-11000-11999" `
     -Direction Outbound `
     -LocalPort 11000-11999 `
@@ -949,13 +901,15 @@ You can create a scenario like below
     -LocalPort 11000-11999 `
     -Protocol TCP `
     -Action Allow `
-    -Profile Any 
+    -Profile Any
+
 
     # Node04
+
     New-NetFirewallRule -DisplayName "SQL_TCP_1433" -Direction Inbound -Protocol TCP -LocalPort 1433 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_UDP_1434" -Direction Inbound -Protocol UDP -LocalPort 1434 -Action Allow -Profile Any
-    New-NetFirewallRule -DisplayName "SQL_TCP_62541" -Direction Inbound -Protocol TCP -LocalPort 62541 -Action Allow -Profile Any
-    New-NetFirewallRule -DisplayName "SQL_TCP_49859" -Direction Inbound -Protocol TCP -LocalPort 49859 -Action Allow -Profile Any
+    New-NetFirewallRule -DisplayName "SQL_TCP_56839" -Direction Inbound -Protocol TCP -LocalPort 56839 -Action Allow -Profile Any
+    New-NetFirewallRule -DisplayName "SQL_TCP_56821" -Direction Inbound -Protocol TCP -LocalPort 56821 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_TCP_5022" -Direction Inbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_TCP_5022_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any    
     New-NetFirewallRule -DisplayName "SQL_TCP_5023" -Direction Inbound -Protocol TCP -LocalPort 5023 -Action Allow 
@@ -973,7 +927,6 @@ You can create a scenario like below
     -Action Allow `
     -Profile Any    
     ```
-
 - Test port connectivity (SQL Server Port and SQL Server Browser Port)
   - Test-NetConnection `<SQLServerName>` -Port `<SQLServerPort>`
   - Test-NetConnection `<SQLServerName>` -Port 1434
@@ -983,14 +936,60 @@ You can create a scenario like below
 - Install AdventureWorks database. [Learn more.](https://github.com/Microsoft/sql-server-samples/releases/tag/adventureworks)
 - Install Northwind and Pubs databases. [Learn more.](https://github.com/microsoft/sql-server-samples/tree/master/samples/databases/northwind-pubs)
 
-#### Create availability group and listener
+#### Create availability group and lister
 - Availability Group
-  - In the scenario, we setup availability group between **Node01\INST01**  and **Node02\INST01**
+  - In the scenario, we setup availability group between **SQLCluster01**, which is SQL Server Failover Cluster on Node01 and Node02, and **Node03\INST01**
   - Enable Availability group through SQL Server Consfiguration Manager
-    - Enable it on Node01\INST01 and Node02\INST01 SQL instances.
-  - Backup one of your databases, which is on FULL recovery mode, on Node01\INST01 and restore it on Node02\INST01 with **No Recovery** option.
-  - Create availability group between these 2 instances and select **Join** only option since the database is restored on Node02\INST01.
+    - Enable it on Node01 and failover it to Node02, which will enable it on Node02 as well because it is the same SQL instance.
+    - Enable it on Node03\INST01
+  - Backup one of your databases, which is on FULL recovery mode, on SQLCluster01 and restore it on Node03\INST01 with **No Recovery** option.
+  - Create availability group between these 2 instances and select **Join** only option since the database is restored on Node03\INST01.
   - Create **listener**
     - DNS Name: Forexample: SQLListener01
-    - Port: 1433 (The AG Listener port is not the same as the SQL Instance’s port binding. The listener port is a virtual endpoint. Clients connect to SQLListener01:1433 and SQL Server routes the connection to Node01\INST01:<dynamic_port> (your standalone instance) or Node02\INST01:<dynamic_port> (your standalone instance)
+    - Port: 1433 (The AG Listener port is not the same as the SQL Instance’s port binding. The listener port is a virtual endpoint. Clients connect to SQLListener01:1433 and SQL Server routes the connection to SQLCluster01:1433 (your FCI primary) or Node03\INST01:<dynamic_port> (your standalone instance))
 
+## Fix
+
+With this setup, Nested VMs can reach to outside like Test-NetConnection, ping but It does not accept any connection from outside. Only Nested VMs can reach to each other.
+
+So we will change it to external switch
+
+```powershell
+# List adapters
+Get-NetAdapter | ft Name, Status, MacAddress, LinkSpeed
+
+# Replace "Ethernet" below with the adapter name that is connected to vnet-onprem
+New-VMSwitch -Name "vSwitch-External" `
+             -NetAdapterName "Ethernet" `
+             -AllowManagementOS $true `
+             -Notes "External switch for nested VMs on 10.2.0.0/16"
+
+# List adapters
+Get-NetAdapter | ft Name, Status, MacAddress, LinkSpeed
+
+# Detach & attach NIC to External switch
+$vm = "Node04"
+
+# Disconnect NIC from NAT switch
+Get-VMNetworkAdapter -VMName $vm | Disconnect-VMNetworkAdapter -Passthru
+
+# Connect NIC to External vSwitch
+Get-VMNetworkAdapter -VMName $vm | Connect-VMNetworkAdapter -SwitchName "vSwitch-External" -Passthru
+
+
+
+# Verify IP config (power on if needed) inside the VM
+# From Hyper-V host, using PowerShell Direct
+Invoke-Command -VMName $vm -ScriptBlock {
+  Write-Host "Current IP config:"
+  Get-NetIPConfiguration | Select-Object InterfaceAlias, IPv4Address, IPv4DefaultGateway, DNSServer | Format-List
+
+  # If adapter is present but no IP (rare), reapply the static IP that the VM had before:
+  # Example: (DO NOT run unless needed; adjust IPs)
+  # New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 10.2.100.15 -PrefixLength 24 -DefaultGateway 10.2.0.1
+  # Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses ("10.2.100.11")
+}
+
+Important: Use the same IP that the VM had before (10.2.100.x). This keeps cluster IPs and listener IPs valid.
+
+```

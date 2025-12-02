@@ -27,7 +27,7 @@ Use it to understand the logical topology before deploying or extending addition
 | ----------------------------------------- | --------------- |
 | `privatelink.postgres.database.azure.com` | `rg-hub`        |
 | `privatelink.openai.azure.com`            | `rg-hub`        |
-| `privatelink.database.windows.net`            | `rg-hub`        |
+| `privatelink.database.windows.net`        | `rg-hub`        |
 
 ## Private DNS Links
 
@@ -35,10 +35,10 @@ Use it to understand the logical topology before deploying or extending addition
 | --------------- | --------------------------------- | ----------------------------------------- | --------------- |
 | `vnet-jumpbox`  | `link-to-vnet-jumpbox-postgresql` | `privatelink.postgres.database.azure.com` | `rg-hub`        |
 | `vnet-jumpbox`  | `link-to-vnet-jumpbox-openai`     | `privatelink.openai.azure.com`            | `rg-hub`        |
-| `vnet-jumpbox`  | `link-to-vnet-jumpbox-azuresql`     | `privatelink.database.windows.net`            | `rg-hub`        |
+| `vnet-jumpbox`  | `link-to-vnet-jumpbox-azuresql`   | `privatelink.database.windows.net`        | `rg-hub`        |
 | `vnet-pgsql01`  | `link-to-vnet-pgsql01-postgresql` | `privatelink.postgres.database.azure.com` | `rg-hub`        |
 | `vnet-openai01` | `link-to-vnet-openai01-openai`    | `privatelink.openai.azure.com`            | `rg-hub`        |
-| `vnet-sqlmi01` | `link-to-vnet-sqlmi01-azuresqlmi`    | `privatelink.database.windows.net`            | `rg-hub`        |
+| `vnet-sqlmi01`  | `link-to-vnet-sqlmi01-azuresqlmi` | `privatelink.database.windows.net`        | `rg-hub`        |
 
 
 

@@ -25,7 +25,7 @@ By using az account set, all future CLI commands will run under this subscriptio
 ```powershell
 # Variables
 $location="westus3"
-$resourceGroup="rg-arc"
+$resourceGroup="rg-azurearc"
 $spName="spn-arc-onboarding"
 $nodes=@("Node01","Node02","Node03","Node04","Node05")
 ```
@@ -115,7 +115,7 @@ Write-Host "  Tenant ID:   $tenant"
 
 ### Step 6: Generate Arc deployment script
 
-- Go to rg-arc resource group
+- Go to rg-azurearc resource group
 - Click on **Create**
 - Search for **Azure Arc**
 - Select **Servers - Azure Arc**
@@ -127,7 +127,7 @@ Write-Host "  Tenant ID:   $tenant"
 
 - Basics
   - Select subscription
-  - Resource group: rg-arc
+  - Resource group: rg-azurearc
   - Region: (US) West US 3
   - Operating System: Windows
   - Connect SQL Server: True (Automatically connect any SQL Server instances to Azure Arc. [Learn more](https://aka.ms/OptOutOfSqlAutomaticConnection))
