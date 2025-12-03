@@ -326,7 +326,7 @@ Write-Host "  Tenant ID:   $tenant"
 It will be used for a database migration from a nested VM to Azure SQL Managed Instance. 
 
 ```powershell
-variables for gateway
+# variables for gateway
 $gwName = "gw-$vnet"
 $publicIPGW = "pip-$gwName"
 $tempPath = "C:\Temp\P2S"

@@ -866,6 +866,8 @@ Create a new Group for SQL
 
 You can create a scenario like below
 
+![Onprem Environment](../images/Environment-OnPrem.png)
+
 - Install SQL Server Failover Cluster on Node01 and Node02
   - Failover Group: SQL Workload01
   - Network Name: SQLCluster01
@@ -878,7 +880,7 @@ You can create a scenario like below
   - Instance 2: SQL Server 2019 on INST01 (63066)
 - Install SQL Server Standalone on Node03
   - Instance 1: SQL Server 2019 on MSSQLSERVER (1433)
-  - Instance 2: SQL Server 2019 on INST01 (63168)
+  - Instance 2: SQL Server 2019 on INST01 (50264)
   - Service: Domain user account
 - Install SQL Server Standalone on Node04
   - Instance 1: SQL Server 2014 on MSSQLSERVER (1433)
@@ -933,7 +935,7 @@ You can create a scenario like below
     # Node03
     New-NetFirewallRule -DisplayName "SQL_TCP_1433" -Direction Inbound -Protocol TCP -LocalPort 1433 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_UDP_1434" -Direction Inbound -Protocol UDP -LocalPort 1434 -Action Allow -Profile Any
-    New-NetFirewallRule -DisplayName "SQL_TCP_63168" -Direction Inbound -Protocol TCP -LocalPort 63168 -Action Allow -Profile Any
+    New-NetFirewallRule -DisplayName "SQL_TCP_50264" -Direction Inbound -Protocol TCP -LocalPort 50264 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_TCP_5022" -Direction Inbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any
     New-NetFirewallRule -DisplayName "SQL_TCP_5022_Outbound" -Direction Outbound -Protocol TCP -LocalPort 5022 -Action Allow -Profile Any    
     New-NetFirewallRule -DisplayName "SQL_TCP_5023" -Direction Inbound -Protocol TCP -LocalPort 5023 -Action Allow 
