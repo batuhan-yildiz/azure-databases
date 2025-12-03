@@ -864,29 +864,10 @@ Create a new Group for SQL
 
 #### Install SQL Server
 
-You can create a scenario like below
+- You can create a scenario like below
 
-![Onprem Environment](../images/Environment-OnPrem.png)
+  ![Onprem Environment](../images/Environment-OnPrem.png)
 
-- Install SQL Server Failover Cluster on Node01 and Node02
-  - Failover Group: SQL Workload01
-  - Network Name: SQLCluster01
-  - Network: 10.200.0.71
-  - Instance: SQL Server 2019 on MSSQLSERVER (1433)
-  - Service: Domain user account
-- Install SQL Server Standalone on Node01 
-  - Instance 2: SQL Server 2019 on INST01 (60636)
-- Install SQL Server Standalone on Node02 
-  - Instance 2: SQL Server 2019 on INST01 (63066)
-- Install SQL Server Standalone on Node03
-  - Instance 1: SQL Server 2019 on MSSQLSERVER (1433)
-  - Instance 2: SQL Server 2019 on INST01 (50264)
-  - Service: Domain user account
-- Install SQL Server Standalone on Node04
-  - Instance 1: SQL Server 2014 on MSSQLSERVER (1433)
-  - Instance 2: SQL Server 2016 on INST01 (62541)
-  - Instance 3: SQL Server 2019 on INST02 (49859)
-  - Service: Domain user account
 - Enable firewall for SQL ports in each node
 
     ```powershell
