@@ -41,14 +41,12 @@ $jumpboxResourceGroup="rg-jumpbox"
 $jumpboxVNet="vnet-jumpbox"
 $onpremResourceGroup="rg-onprem"
 $onpremVNet="vnet-onprem"
-$serverName="azsqlmimod01"
 $adminUser = "azsqladmin"
 $adminPassword = Read-Host -Prompt "Enter admin password:" -AsSecureString
 $cred = New-Object System.Management.Automation.PSCredential($adminUser, $adminPassword)
 $serverName="azsqlmidevtest01"
 #$serverNameTemp="azsqlmimod01temp02"
 $spName = "sqlmi-spm-azuresqlmidevtest01"
-
 ```
 
 💡 Note:

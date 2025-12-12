@@ -1,0 +1,165 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "parameters": [
+          {
+            "id": "4d0b1c4f-1b24-4187-8d0e-4bc757bb4dc9",
+            "version": "KqlParameterItem/1.0",
+            "name": "Subscription",
+            "type": 2,
+            "description": "Select subscription",
+            "isRequired": true,
+            "isGlobal": true,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "ResourceContainers\r\n| where type =~ 'microsoft.resources/subscriptions'\r\n| project Label = subscriptionId, Value = subscriptionId\r\n| order by Label asc",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "value": [
+              "value::all"
+            ]
+          },
+          {
+            "id": "8250c13d-d5bf-4b57-936e-357d8288fb6f",
+            "version": "KqlParameterItem/1.0",
+            "name": "ResourceGroups",
+            "label": "Resource groups",
+            "type": 2,
+            "description": "Select resource group",
+            "isRequired": true,
+            "isGlobal": true,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "ResourceContainers\r\n| where type == \"microsoft.resources/subscriptions/resourcegroups\"\r\n| where \"*\" in~ ({Subscription}) or subscriptionId in~ ({Subscription})\r\n| project Label = name, Value = name, SubscriptionId = subscriptionId\r\n| order by Label asc\r\n",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "*",
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "value": [
+              "value::all"
+            ]
+          },
+          {
+            "id": "cb69c054-56ac-4e9e-a6dc-015ff01d8620",
+            "version": "KqlParameterItem/1.0",
+            "name": "ResourceTypes",
+            "label": "Resource types",
+            "type": 2,
+            "description": "Select resource types",
+            "isRequired": true,
+            "isGlobal": true,
+            "multiSelect": true,
+            "quote": "'",
+            "delimiter": ",",
+            "query": "Resources\r\n| where \"*\" in~ ({Subscription}) or subscriptionId in~ ({Subscription})\r\n| where \"*\" in~ ({ResourceGroups}) or resourceGroup in~ ({ResourceGroups})\r\n| project ResourceType = type\r\n| distinct ResourceType\r\n| project Label = ResourceType, Value = ResourceType\r\n| order by Label asc\r\n",
+            "crossComponentResources": [
+              "value::all"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "selectAllValue": "*",
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "value": [
+              "value::all"
+            ]
+          }
+        ],
+        "style": "pills",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources"
+      },
+      "name": "parameters - 0"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n    | where \"*\" in~ ({Subscription}) or subscriptionId in~ ({Subscription})\r\n    | where \"*\" in~ ({ResourceGroups}) or resourceGroup in~ ({ResourceGroups})\r\n    | where \"*\" in~ ({ResourceTypes}) or type in~ ({ResourceTypes})\r\n    | where type == \"microsoft.hybridcompute/machines\"\r\n    | extend idServer = tolower(tostring(id))\r\n    | extend nameServer = name\r\n    | extend subscriptionId = subscriptionId\r\n    | extend locationServer = location\r\n    | extend resourceGroupServer = resourceGroup\r\n    | extend tagsServer = tags\r\n    | extend provisioningStateServer = tostring(properties.provisioningState)\r\n    | extend statusServer = tostring(properties.status)\r\n    | extend osType = tostring(properties.osType)\r\n    | extend displayNameServer = tostring(properties.displayName)\r\n    | extend computerName = tostring(properties.osProfile.computerName)\r\n    | extend logicalCoreCount = properties.detectedProperties.logicalCoreCount\r\n    | extend processorCount = properties.detectedProperties.processorCount\r\n    | extend coreCount = properties.detectedProperties.coreCount\r\n    | extend totalPhysicalMemoryInGigabytes = toreal(properties.detectedProperties.totalPhysicalMemoryInGigabytes)\r\n    | extend mssqldiscovered = properties.detectedProperties.mssqldiscovered\r\n    | extend pgsqldiscovered = properties.detectedProperties.pgsqldiscovered\r\n    | extend mysqldiscovered = properties.detectedProperties.mysqldiscovered\r\n    | extend licenseAssignmentState = tostring(properties.licenseProfile.esuProfile.licenseAssignmentState)\r\n    | extend esuEligibility = tostring(properties.licenseProfile.esuProfile.esuEligibility)\r\n    | extend serverType = tostring(properties.licenseProfile.esuProfile.serverType)\r\n    | extend licenseStatus = tostring(properties.licenseProfile.licenseStatus)\r\n    | extend osEdition = tostring(properties.osEdition)\r\n    | extend osSku = tostring(properties.osSku)\r\n    | extend agentVersion = tostring(properties.agentVersion)\r\n    | project nameServer, provisioningStateServer, statusServer, \r\n        osType, displayNameServer, computerName,\r\n        osSku, osEdition, \r\n        processorCount, logicalCoreCount, coreCount, totalPhysicalMemoryInGigabytes,\r\n        mssqldiscovered, pgsqldiscovered, mysqldiscovered,\r\n        licenseAssignmentState, esuEligibility, serverType, licenseStatus,\r\n        agentVersion,\r\n        idServer, subscriptionId, locationServer, resourceGroupServer, tagsServer\r\n| join kind= leftouter (\r\n    resources\r\n        | where type == \"microsoft.hybridcompute/machines/extensions\"\r\n        | where properties.type in (\"WindowsAgent.SqlServer\",\"LinuxAgent.SqlServer\")\r\n        | extend idExtension = tolower(tostring(id))\r\n        | extend idServerExtension = tolower(tostring (iff(id contains \"/extensions/WindowsAgent.SqlServer\" or id contains \"/extensions/LinuxAgent.SqlServer\", \r\n                                                            substring(id, 0, indexof(id, \"/extensions/\")), \r\n                                                            \"\")))\r\n        | extend provisioningStateExtension = tostring(properties.provisioningState)\r\n        | extend typeExtension = tostring(properties.type)\r\n        | extend typeHandlerVersion = properties.instanceView.typeHandlerVersion\r\n        | parse properties with * 'SQL Server Extension Agent: ' sqlAgentStatus ';' *\r\n        | extend sqlAgentStatus = iff(isnotempty(sqlAgentStatus),sqlAgentStatus,\"Unhealthy\")\r\n        | parse properties with * 'uploadStatus : ' uploadStatus ';' *\r\n        | extend uploadStatus = iff(isnotempty(uploadStatus),uploadStatus,\"Missing SQL Agent\")\r\n        | extend licenseType = tostring(properties.settings.LicenseType)\r\n        | extend enableExtendedSecurityUpdates = iff(notnull(properties.settings.enableExtendedSecurityUpdates), properties.settings.enableExtendedSecurityUpdates, \"false\")\r\n        | extend extensionBpaEnabled = iff(notnull(properties.settings.AssessmentSettings),properties.settings.AssessmentSettings.Enable,\"false\")\r\n        | extend automaticUpdates = iff(notnull(properties.settings.MicrosoftUpdateConfiguration),properties.settings.MicrosoftUpdateConfiguration.EnableMicrosoftUpdate,\"false\")\r\n    | project provisioningStateExtension, typeExtension, \r\n        sqlAgentStatus, uploadStatus, licenseType, enableExtendedSecurityUpdates, extensionBpaEnabled, automaticUpdates,\r\n        typeHandlerVersion, idExtension, idServerExtension\r\n)\r\n    on $left.idServer == $right.idServerExtension\r\n    | project \r\n        [\"Server Name\"] = nameServer, [\"Server Provisioning State\"] = provisioningStateServer, \r\n        [\"Server Status\"] = statusServer, \r\n        [\"OS Type\"] = osType, [\"Server Display Name\"] = displayNameServer, [\"Computer Name\"] = computerName,\r\n        [\"OS Sku\"] = osSku, [\"OS Edition\"] = osEdition, [\"Server Type\"] = serverType,\r\n        [\"Physical Processor\"] = processorCount, [\"Logical Processor\"] = logicalCoreCount, [\"Cores\"] = coreCount, [\"Physical Memory (GB)\"] = totalPhysicalMemoryInGigabytes,\r\n        [\"MSSQL Discovered\"] = mssqldiscovered, [\"PGSQL Discovered\"] = pgsqldiscovered, [\"MySQL Discovered\"] = mysqldiscovered,\r\n        [\"ESU License\"] = licenseAssignmentState, [\"ESU Eligibility\"] = esuEligibility, [\"License Status\"] = licenseStatus,\r\n        [\"Agent Version\"] = agentVersion,\r\n        [\"Region\"] = locationServer, [\"Resource Group\"] = resourceGroupServer, [\"Server Tags\"] = tagsServer,\r\n        [\"Extension Provisioning State\"] = provisioningStateExtension, [\"Extension Type\"] = typeExtension,\r\n        [\"SQL Agent Status\"] = sqlAgentStatus, [\"Upload Status\"] = uploadStatus, [\"License Type\"] = licenseType, \r\n        [\"ESU\"] = enableExtendedSecurityUpdates, [\"BPA\"] = extensionBpaEnabled, [\"Automatic Updates\"] = automaticUpdates, [\"Handler Version\"] = typeHandlerVersion,\r\n        idServer, subscriptionId, idExtension",
+        "size": 0,
+        "title": "Arc Server Details",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ],
+        "visualization": "table",
+        "sortBy": []
+      },
+      "name": "query - 1"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n    | where \"*\" in~ ({Subscription}) or subscriptionId in~ ({Subscription})\r\n    | where \"*\" in~ ({ResourceGroups}) or resourceGroup in~ ({ResourceGroups})\r\n    | where \"*\" in~ ({ResourceTypes}) or type in~ ({ResourceTypes})\r\n    | where type == \"microsoft.hybridcompute/machines\"\r\n    | extend idServer = tolower(tostring(id))\r\n    | extend nameServer = name\r\n    | extend esuEligibility = tostring(properties.licenseProfile.esuProfile.esuEligibility)\r\n    | project nameServer, esuEligibility, idServer, subscriptionId\r\n| join kind= leftouter (\r\n    resources\r\n        | where type == \"microsoft.hybridcompute/machines/extensions\"\r\n        | where properties.type in (\"WindowsAgent.SqlServer\",\"LinuxAgent.SqlServer\")\r\n        | extend idExtension = tolower(tostring(id))\r\n        | extend idServerExtension = tolower(tostring (iff(id contains \"/extensions/WindowsAgent.SqlServer\" or id contains \"/extensions/LinuxAgent.SqlServer\", \r\n                                                            substring(id, 0, indexof(id, \"/extensions/\")), \r\n                                                            \"\")))\r\n        | extend licenseType = tostring(properties.settings.LicenseType)\r\n        | extend enableExtendedSecurityUpdates = iff(notnull(properties.settings.enableExtendedSecurityUpdates), properties.settings.enableExtendedSecurityUpdates, \"false\")\r\n        | extend extensionBpaEnabled = iff(notnull(properties.settings.AssessmentSettings),properties.settings.AssessmentSettings.Enable,\"false\")\r\n    | project licenseType, enableExtendedSecurityUpdates, extensionBpaEnabled, idExtension, idServerExtension\r\n)        \r\n    on $left.idServer == $right.idServerExtension\r\n| join kind= leftouter (\r\n    resources\r\n        | where type == \"microsoft.azurearcdata/sqlserverinstances\"\r\n        | extend idSQL = tolower(tostring(id))\r\n        | extend idServerSQL = tolower(tostring(properties.containerResourceId))\r\n        | extend sqlProvisioningState = tostring(properties.provisioningState)\r\n        | extend collationSQL = tostring(properties.collation)\r\n        | extend azureDefenderStatus = tostring(properties.azureDefenderStatus)\r\n        | extend versionSQL = tostring(properties.version)\r\n        | extend maxServerMemoryMBSQL = tostring(properties.maxServerMemoryMB)\r\n        | extend failoverClusterNetworkName = iff(notnull(properties.failoverCluster), properties.failoverCluster.networkName, \"false\")\r\n        | extend failoverClusterHostNames = iff(notnull(properties.failoverCluster.hostNames), properties.failoverCluster.hostNames, \"false\")\r\n        | extend licenseTypeSQL = tostring(properties.licenseType)\r\n        | extend tcpStaticPorts = tostring(properties.tcpStaticPorts)\r\n        | extend tcpDynamicPorts = tostring(properties.tcpDynamicPorts)\r\n        | extend currentVersionSQL = tostring(properties.currentVersion)\r\n        | extend instanceNameSQL = tostring(properties.instanceName)\r\n        | extend isHadrEnabled = tostring(properties.isHadrEnabled)\r\n        | extend alwaysOnRole = tostring(properties.alwaysOnRole)\r\n        | extend traceFlags = tostring(properties.traceFlags)\r\n        | extend migrationAssessmentEnabled = iff(notnull(properties.migration.assessment), properties.migration.assessment.enabled, \"false\")\r\n        | extend migrationAssessmentskuRecommendation = iff(notnull(properties.migration.assessment.skuRecommendationResults), \"true\", \"false\")\r\n        | extend editionSQL = tostring(properties.edition)\r\n        | extend vCoreSQL = tostring(properties.vCore)\r\n        | extend coresSQL = tostring(properties.cores)\r\n    | project sqlProvisioningState, \r\n        instanceNameSQL, versionSQL, currentVersionSQL, editionSQL,\r\n        licenseTypeSQL, vCoreSQL, coresSQL, maxServerMemoryMBSQL, collationSQL, \r\n        isHadrEnabled, alwaysOnRole, \r\n        failoverClusterNetworkName, failoverClusterHostNames,  \r\n        tcpStaticPorts, tcpDynamicPorts, traceFlags,\r\n        azureDefenderStatus, migrationAssessmentEnabled, migrationAssessmentskuRecommendation,\r\n        idSQL, idServerSQL\r\n)\r\n    on $left.idServerExtension == $right.idServerSQL\r\n    | where isnotempty(idServerSQL)\r\n    | project [\"Server Name\"] = nameServer, [\"SQL Server Instance Name\"] = instanceNameSQL,\r\n        [\"SQL Version\"] = versionSQL, [\"SQL Current Version\"] = currentVersionSQL, [\"SQL Edition\"] = editionSQL,\r\n        [\"SQL License Type\"] = licenseTypeSQL, [\"SQL Logical Cores\"] = vCoreSQL, [\"SQL Cores\"] = coresSQL, \r\n        [\"SQL Memory (MB)\"] = maxServerMemoryMBSQL, [\"SQL Collation\"] = collationSQL,\r\n        [\"HADR Enabled\"] = isHadrEnabled, [\"Always On Role\"] = alwaysOnRole,\r\n        [\"Failover Cluster Network Name\"] = failoverClusterNetworkName, [\"Failover Cluster Host Names\"] = failoverClusterHostNames, \r\n        [\"SQL Static Port\"] = tcpStaticPorts, [\"SQL Dynamic Port\"] = tcpDynamicPorts, [\"SQL Trace Flags\"] = traceFlags,\r\n        [\"Defender Status\"] = azureDefenderStatus, [\"Migration Assessment Enabled\"] = migrationAssessmentEnabled, \r\n        [\"Migration Assessment SKU Recommendation\"] = migrationAssessmentskuRecommendation,\r\n        [\"ESU Eligibility\"] = esuEligibility, [\"License Type\"] = licenseType, \r\n        [\"ESU\"] = enableExtendedSecurityUpdates, [\"BPA\"] = extensionBpaEnabled,\r\n        [\"SQL Server Provisioning State\"] = sqlProvisioningState,\r\n        idServer, subscriptionId, idSQL\r\n        | order by [\"Server Name\"] asc, [\"SQL Server Instance Name\"] asc",
+        "size": 0,
+        "title": "Arc SQL Server Details",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ]
+      },
+      "name": "query - 2"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "resources\r\n    | where \"*\" in~ ({Subscription}) or subscriptionId in~ ({Subscription})\r\n    | where \"*\" in~ ({ResourceGroups}) or resourceGroup in~ ({ResourceGroups})\r\n    | where \"*\" in~ ({ResourceTypes}) or type in~ ({ResourceTypes})\r\n    | where type == \"microsoft.hybridcompute/machines\"\r\n    | extend idServer = tolower(tostring(id))\r\n    | extend nameServer = name\r\n    | project nameServer, idServer, subscriptionId\r\n| join kind= leftouter (\r\n    resources\r\n        | where type == \"microsoft.hybridcompute/machines/extensions\"\r\n        | where properties.type in (\"WindowsAgent.SqlServer\",\"LinuxAgent.SqlServer\")\r\n        | extend idExtension = tolower(tostring(id))\r\n        | extend idServerExtension = tolower(tostring (iff(id contains \"/extensions/WindowsAgent.SqlServer\" or id contains \"/extensions/LinuxAgent.SqlServer\", \r\n                                                            substring(id, 0, indexof(id, \"/extensions/\")), \r\n                                                            \"\")))\r\n        | extend licenseType = tostring(properties.settings.LicenseType)\r\n    | project licenseType, idExtension, idServerExtension\r\n)        \r\n    on $left.idServer == $right.idServerExtension\r\n| join kind= leftouter (\r\n    resources\r\n        | where type == \"microsoft.azurearcdata/sqlserverinstances\"\r\n        | extend idSQL = tolower(tostring(id))\r\n        | extend idServerSQL = tolower(tostring(properties.containerResourceId))\r\n        | extend versionSQL = tostring(properties.version)\r\n        | extend instanceNameSQL = tostring(properties.instanceName)\r\n        | extend editionSQL = tostring(properties.edition)\r\n    | project  \r\n        instanceNameSQL, versionSQL, editionSQL,\r\n        idSQL, idServerSQL\r\n)\r\n    on $left.idServerExtension == $right.idServerSQL\r\n    | where isnotempty(idServerSQL)\r\n| join kind= leftouter (\r\n    resources\r\n        | where type == \"microsoft.azurearcdata/sqlserverinstances/databases\"\r\n        | where name !in (\"master\",\"model\",\"msdb\",\"tempdb\")\r\n        | extend idDatabase = tolower(tostring(id))\r\n        | extend idSQLDatabase = tolower(tostring(substring(id, 0, indexof(id, \"/Databases/\"))))\r\n        | extend databaseName = name\r\n        | extend provisioningStateDatabase = tostring(properties.provisioningState)\r\n        | extend stateDatabase = tostring(properties.state)\r\n        | extend assessmentUploadTime = iff(notnull(properties.migration.assessment), properties.migration.assessment.assessmentUploadTime, \"false\")\r\n        | extend azureSqlManagedInstanceRecommendationStatus = iff(notnull(properties.migration.assessment.targetReadiness.azureSqlManagedInstance), properties.migration.assessment.targetReadiness.azureSqlManagedInstance.recommendationStatus, \"false\")\r\n        | extend azureSqlVirtualMachineRecommendationStatus = iff(notnull(properties.migration.assessment.targetReadiness.azureSqlVirtualMachine), properties.migration.assessment.targetReadiness.azureSqlVirtualMachine.recommendationStatus, \"false\")\r\n        | extend azureSqlDatabaseRecommendationStatus = iff(notnull(properties.migration.assessment.targetReadiness.azureSqlDatabase), properties.migration.assessment.targetReadiness.azureSqlDatabase.recommendationStatus, \"false\")\r\n        | extend databaseCreationDate = tostring(properties.databaseCreationDate)\r\n        | extend compatibilityLevel = properties.compatibilityLevel\r\n        | extend databaseSpaceAvailableMB = round(toreal(properties.spaceAvailableMB))\r\n        | extend databaseRecoveryMode = tostring(properties.recoveryMode)\r\n        | extend databaseIsReadOnly = tostring(properties.isReadOnly)\r\n        | extend databaseStatus = tostring(properties.state)\r\n        | extend databaseSizeMB = properties.sizeMB\r\n        | extend dataFileSizeMB = properties.dataFileSizeMB\r\n        | extend logFileSizeMB = properties.logFileSizeMB\r\n        | extend lastFullBackup = iff(notnull(properties.backupInformation), properties.backupInformation.lastFullBackup, \"false\")\r\n        | extend lastLogBackup = iff(notnull(properties.lastLogBackup), properties.backupInformation.lastLogBackup, \"false\")\r\n    | project  \r\n        databaseName,\r\n        stateDatabase, databaseCreationDate, compatibilityLevel,\r\n        databaseSpaceAvailableMB, databaseRecoveryMode, databaseIsReadOnly,\r\n        databaseStatus, databaseSizeMB, dataFileSizeMB, logFileSizeMB, lastFullBackup, lastLogBackup,\r\n        assessmentUploadTime, azureSqlManagedInstanceRecommendationStatus,\r\n        azureSqlVirtualMachineRecommendationStatus, azureSqlDatabaseRecommendationStatus, \r\n        provisioningStateDatabase,\r\n        idDatabase, idSQLDatabase\r\n)\r\n    on $left.idSQL == $right.idSQLDatabase\r\n    | where isnotempty(idSQLDatabase)\r\n    | project [\"Server Name\"] = nameServer, [\"SQL Server Instance Name\"] = instanceNameSQL,\r\n        [\"Database Name\"] = databaseName, [\"Database Status\"] = databaseStatus,\r\n        [\"Date Created\"] = databaseCreationDate, [\"Size\"] = databaseSizeMB,\r\n        [\"Data File Size\"] = dataFileSizeMB, [\"Log File Size\"] = logFileSizeMB, [\"Space Available\"] = databaseSpaceAvailableMB,\r\n        [\"Read Only\"] = databaseIsReadOnly, [\"Compatibility Level\"] = compatibilityLevel,\r\n        [\"Recovery Mode\"] = databaseRecoveryMode, [\"Last Log Backup\"] = lastLogBackup, [\"Last Full Backup\"] = lastFullBackup,\r\n        [\"Assessment Upload Time\"] = assessmentUploadTime,\r\n        [\"Azure SQL MI Migration Readiness\"] = azureSqlManagedInstanceRecommendationStatus,\r\n        [\"Azure SQL VM Migration Readiness\"] = azureSqlVirtualMachineRecommendationStatus,\r\n        [\"Azure SQL DB Migration Readiness\"] = azureSqlDatabaseRecommendationStatus,\r\n        [\"Database Provisioning State\"] = provisioningStateDatabase,\r\n        [\"SQL Version\"] = versionSQL, [\"SQL Edition\"] = editionSQL,\r\n        [\"License Type\"] = licenseType,\r\n        idServer, subscriptionId, idSQL, idDatabase, idSQLDatabase\r\n        | order by [\"Server Name\"] asc, [\"SQL Server Instance Name\"] asc, [\"Database Name\"] asc",
+        "size": 0,
+        "title": "Arc SQL Server Database Details",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources",
+        "crossComponentResources": [
+          "value::all"
+        ]
+      },
+      "name": "query - 3"
+    }
+  ],
+  "fallbackResourceIds": [
+    "Azure Monitor"
+  ],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
