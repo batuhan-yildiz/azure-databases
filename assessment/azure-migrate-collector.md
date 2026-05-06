@@ -147,13 +147,13 @@ The same Azure migrate collector can be used to discover both VMware machines an
     </tr>
     <tr>
         <td style="vertical-align: top;">
-        <img src="../images/Azure-Migrate-10.png" width="300">
+        <img src="../images/Azure-Migrate-10.png" width="300" style="display:block;">
         </td>
         <td style="vertical-align: top;">
-        <img src="../images/Azure-Migrate-11.png" width="300">
+        <img src="../images/Azure-Migrate-11.png" width="300" style="display:block;">
         </td>
         <td style="vertical-align: top;">
-        <img src="../images/Azure-Migrate-12.png" width="300">
+        <img src="../images/Azure-Migrate-12.png" width="300" style="display:block;">
         </td>
     </tr>
     </table>
