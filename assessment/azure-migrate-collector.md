@@ -92,8 +92,39 @@ Azure Migrate collector can discover your VMware estate or individual Windows an
     ```powershell
     .\AzureMigratecollector.ps1
     ```
-- For the first installation, select the fresh (f) option.
+- For the first installation, select the fresh (F) option. To upgrade the collector to a newer version, select the update (U) option.
 
     ![Create Azure Migrate Project](/images/Azure-Migrate-06.png)
 
+- The installer script performs the following actions:
+    - Adding\Updating Registry Keys at HKLM:\Software\Microsoft\AzureAppliance
+    - Enabling IIS Role and other dependent features
+        - WAS, WAS-Process-Model, WAS-Config-APIs, Web-Server, Web-WebServer, Web-Mgmt-Service, Web-Request-Monitor, Web-Common-Http, Web-Static-Content, Web-Default-Doc, Web-Dir-Browsing, Web-Http-Errors, Web-App-Dev, Web-CGI, Web-Health, Web-Http-Logging, Web-Log-Libraries, Web-Security, Web-Filtering, Web-Performance, Web-Stat-Compression, Web-Mgmt-Tools, Web-Mgmt-Console, Web-Scripting-Tools, Web-Asp-Net45, Web-Net-Ext45, Web-Http-Redirect, Web-Windows-Auth, Web-Url-Auth
+    - Creating files
+        - Config: C:\ProgramData\Microsoft Azure\Config
+        - Offline Data: C:\ProgramData\Microsoft Azure\OfflineData
+    - Installing
+        - Microsoft Azure VMware Discovery Service.msi
+        - Microsoft Azure VMware Assessment Service.msi
+        - Microsoft Azure SQL Discovery and Assessment Service.msi
+        - Microsoft Azure Web App Discovery and Assessment Service.msi
+        - Microsoft Azure Server Discovery Service.msi
+        - MicrosoftAzureApplianceConfigurationManager.msi
+        - New Edge browser if not installed
+    - Ensuring critical services for Azure Migrate appliance configuration manager are running
+    - Launching Azure Migrate appliance configuration manager to start the onboarding process. You may use the shortcut placed on the desktop to manually launch **Azure Migrate appliance configuration manager**.
+
+        ![Create Azure Migrate Project](/images/Azure-Migrate-07.png)
+
+## Collect data
+
+The same Azure migrate collector can be used to discover both VMware machines and physical servers that’s hypervisor agnostic. To collect data about physical servers, switch the fabric type at the top to physical. Otherwise keep it as VMWare to collect data from vCenter.
+
+**Note:** After fresh install, all inputs may be grayed out. You may not e able to switch Fabric Type to Physical. You need to refresh the browser and then you will be able to switch.
+
+### Collect data from physical servers
+
+- Switch Fabric Type to **Physical**.
+
+    ![Create Azure Migrate Project](/images/Azure-Migrate-08.png)
 
