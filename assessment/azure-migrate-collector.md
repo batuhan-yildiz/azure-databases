@@ -128,3 +128,22 @@ The same Azure migrate collector can be used to discover both VMware machines an
 
     ![Create Azure Migrate Project](/images/Azure-Migrate-08.png)
 
+- Provide credentials for discovery of Windows and Linux physical or virtual servers
+    - Review supported [types of credentials](https://learn.microsoft.com/en-us/azure/migrate/add-server-credentials?view=migrate#types-of-server-credentials-supported)
+    - Review the required permissions for [Windows Credentials](https://learn.microsoft.com/en-us/azure/migrate/tutorial-discover-physical?view=migrate-classic#prepare-windows-server) and [Linux Credentials](https://learn.microsoft.com/en-us/azure/migrate/tutorial-discover-physical?view=migrate-classic#prepare-linux-server)
+
+    ![Create Azure Migrate Project](/images/Azure-Migrate-09.png)
+
+- Provide physical and virtual server details
+    - [Learn](https://learn.microsoft.com/en-us/azure/migrate/migrate-appliance?view=migrate#discovery-and-collection-process) more about the prerequisites for physical server discovery
+    - You can add a single item, or multiple items, or import CSV
+
+    ![Create Azure Migrate Project](/images/Azure-Migrate-10.png)
+
+    ![Create Azure Migrate Project](/images/Azure-Migrate-11.png)
+
+    ![Create Azure Migrate Project](/images/Azure-Migrate-12.png)
+
+| Step 1 | Step 2 | Step 3 |
+|--------|--------|--------|
+| <div style="vertical-align: top;"> <img src="../images/Azure-Migrate-10.png" width="300"> </div> | <div style="vertical-align: top;"> <img src="../images/Azure-Migrate-11.png" width="300"> </div> | <div style="vertical-align: top;"> <img src="../images/Azure-Migrate-12.png" width="300"> </div> |
