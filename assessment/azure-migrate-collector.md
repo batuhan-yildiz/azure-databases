@@ -138,24 +138,10 @@ The same Azure migrate collector can be used to discover both VMware machines an
     - [Learn](https://learn.microsoft.com/en-us/azure/migrate/migrate-appliance?view=migrate#discovery-and-collection-process) more about the prerequisites for physical server discovery
     - You can add a single item, or multiple items, or import CSV
 
+    | Add single item | Add multiple items | Import CSV |
+    |-----------------|-------------------|------------|
+    | ![](../images/Azure-Migrate-10.png) | ![](../images/Azure-Migrate-11.png) | ![](../images/Azure-Migrate-12.png) |
 
-    <table>
-    <tr>
-        <th>Add single item</th>
-        <th>Add multiple items</th>
-        <th>Import CSV</th>
-    </tr>
-    <tr>
-        <td style="vertical-align: top;">
-        <img src="../images/Azure-Migrate-10.png" width="300" style="display:block;">
-        </td>
-        <td style="vertical-align: top;">
-        <img src="../images/Azure-Migrate-11.png" width="300" style="display:block;">
-        </td>
-        <td style="vertical-align: top;">
-        <img src="../images/Azure-Migrate-12.png" width="300" style="display:block;">
-        </td>
-    </tr>
-    </table>
+
 
 
