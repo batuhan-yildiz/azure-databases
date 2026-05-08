@@ -16,11 +16,11 @@ Reports provide a summarized view of migration and modernization insights such a
 
 ## Download the report
 
-- In your **Azure Migrate Project**, go to **Manage -> Reports** and **(3) download** the report.
+- In your **Azure Migrate Project**, go to **Manage -> Reports**, find your report and then select **Download** to download the report.
 
     ![Create Azure Migrate Project](/images/Azure-Migrate-37.png)
 
-- In azure-migrate folder, you will see the PowerPoint file and Excel files with all the details
+- In the **azure-migrate** folder,  you will find the generated PowerPoint and Excel files containing detailed insights.
 
     ![Create Azure Migrate Project](/images/Azure-Migrate-Report-01.png)
 
@@ -29,41 +29,43 @@ Reports provide a summarized view of migration and modernization insights such a
 ## Review the report
 
 - Open the PowerPoint file.
-- Review **Inventory Summary**.
+- Review the **Inventory Summary**.
 
     ![Create Azure Migrate Project](/images/Azure-Migrate-Report-03.png)
 
-    - Total VMs discovered: 47 (These VMs have at least 1 Database instance, or Webapp, or Fileshare or Application)
-        - 21 of them are Windows
-        - 26 of them are Linux
-    - Server distribution by workload type
+    - **Total VMs discovered:** 47 (These VMs have at least one database instance, web app, file share or application)
+        - 21 are Windows
+        - 26 are Linux
+    - **Server distribution by workload type**
         - 16 database servers
-        - 18 webapp servers
-        - 9 fileshare servers (NFS, SMB)
-        - 4 other workloads (These are the VMs without Database instance, Webapp, Fileshare and Application. No any workload has been identified.)
-    - Servers running both database and webapps
-        - 0 servers running both database and webapps
-    - Total workloads: 101
-        - It is the sum of database instances, webapps, fileshares (number of fileshares not fileshare servers) and servers
-        - 16 database instances, 18 webapps, 20 fileshares and 47 servers
-    - Server power status
-        - Powered ON for 45 servers
-        - Powered OFF for 2 servers
-    - Dev/Test vs Production workloads
-        - 101 workloads are all production
-        - This informaiton is coming from workload tags. Review the tag information [here](azure-migrate-collector.md#explore-the-inventory). If **AzM_Environment** tag is absent on the servers or workloads, they're considered as production workloads by default. If the workloads and servers operate in the dev/test environment, tag them with AzM.Environment: Dev.
-    - Servers: 47
+        - 18 web app servers
+        - 9 file share servers (NFS, SMB)
+        - 4 other workloads (VMs without a database instance, web app, file share, or application — no workload has been identified)
+    - **Servers running both database and web apps**
+        - 0 servers running both database and web apps
+    - **Total workloads:** 101
+        - This is the sum of database instances, web apps, file shares (number of file shares, not file share servers), and servers
+        - 16 database instances, 18 web apps, 20 file shares and 47 servers
+    - **Server power status**
+        - 45 servers are powered on
+        - 2 servers are powered off
+    - **Dev/Test vs Production workloads**
+        - All 101 workloads are classified as production
+        - This information is derived from workload tags. Review the tagging details [here](azure-migrate-collector.md#explore-the-inventory). 
+            - If **AzM_Environment** tag is absent on the servers or workloads, they're considered as production workloads by default
+            - If the workloads and servers operate in the dev/test environment, tag them with AzM.Environment: Dev.
+    - **Servers:** 47
         - 21 Windows servers
         - 14 Red Hat Enterprise Linux (RHEL) servers
         - 12 Other Linux (Ubuntu) servers
-    - Databases: 16
+    - **Databases:** 16
         - 5 SQL servers
         - 5 MySQL/MariaDB servers
         - 6 PostgreSQL servers
-    - Webapps: 18
-        - 10 Java Webapp servers
+    - **Web apps:** 18
+        - 10 Java web app servers
         - 8 ASP.Net servers
-    - Out of support workloads: 7
+    - **Out of support workloads:** 7
 
 ## Additional resources
 
