@@ -51,7 +51,7 @@ Reports provide a summarized view of migration and modernization insights such a
         - Powered OFF for 2 servers
     - Dev/Test vs Production workloads
         - 101 workloads are all production
-        - This informaiton is coming from workload tags. Review the tag information [here](https://github.com/batuhan-yildiz/azure-databases/blob/main/assessment/azure-migrate-collector.md#explore-the-inventory). If **AzM_Environment** tag is absent on the servers or workloads, they're considered as production workloads by default. If the workloads and servers operate in the dev/test environment, tag them with AzM.Environment: Dev.
+        - This informaiton is coming from workload tags. Review the tag information [here](azure-migrate-collector.md#explore-the-inventory). If **AzM_Environment** tag is absent on the servers or workloads, they're considered as production workloads by default. If the workloads and servers operate in the dev/test environment, tag them with AzM.Environment: Dev.
     - Servers: 47
         - 21 Windows servers
         - 14 Red Hat Enterprise Linux (RHEL) servers
@@ -64,5 +64,9 @@ Reports provide a summarized view of migration and modernization insights such a
         - 10 Java Webapp servers
         - 8 ASP.Net servers
     - Out of support workloads: 7
+
+## Additional resources
+
+- [Discover servers and workloads using Azure Migrate collector](azure-migrate-collector.md)
 
 

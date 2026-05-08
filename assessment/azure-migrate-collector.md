@@ -348,6 +348,6 @@ Azure Migrate reports provide a summarized view of Migration and modernization o
 
 ## Next steps
 
-- [Review the report](/assessment/azure-migrate-view-report.md)
+- [Review the report](azure-migrate-view-report.md)
 - Review the business case
 - Review the assessment
