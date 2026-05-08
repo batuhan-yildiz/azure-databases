@@ -1,4 +1,4 @@
-# Discover servers and workloads using Azure Migrate collector
+# Overview of Azure Migrate reports
 
 Azure Migrate reports provide a summarized view of Migration and modernization opportunities to Azure. They include insights on workload readiness, security, and costs to help you prioritize workloads and make informed migration and modernization decisions. Reports can be generated after successful discovery and inventory enrichment.
 
