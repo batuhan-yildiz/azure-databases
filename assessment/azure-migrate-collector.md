@@ -342,12 +342,12 @@ Azure Migrate reports provide a summarized view of Migration and modernization o
 
     ![Create Azure Migrate Project](/images/Azure-Migrate-36.png)
 
-- It will creat an **(1) Assessment**, **(2) Business case** and **(3) Report**. You can download and review the report.
+- It will create an **(1) Assessment**, **(2) Business case** and **(3) Report**. You can download and review the report.
 
     ![Create Azure Migrate Project](/images/Azure-Migrate-37.png)
 
 ## Next steps
 
-- Review the report
+- [Review the report](/assessment/azure-migrate-view-report.md)
 - Review the business case
 - Review the assessment
