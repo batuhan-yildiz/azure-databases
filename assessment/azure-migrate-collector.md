@@ -27,7 +27,7 @@ The Azure Migrate Collector can discover your VMware estate or individual Window
 - Upload the collected data to an Azure Migrate project
 - Enrich the discovery inventory
     - Apply custom tags such as department, business unit, scope
-    - Apply reserved tags sucs as dev, test, retain, retire
+    - Apply reserved tags such as dev, test, retain, retire
 - After the upload is successful, create reports, business cases and assessments
 - Import additional inventory if needed
 
